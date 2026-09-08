@@ -2,6 +2,19 @@
 	"app": {
 		"title": "asdf"
 	},
+	"browser": {
+		"title": "ブラウザ",
+		"open": "新しいブラウザ",
+		"address": "アドレス",
+		"back": "戻る",
+		"forward": "進む",
+		"reload": "再読み込み",
+		"connect": "エージェント:",
+		"copy": "コマンドをコピー",
+		"copied": "コピーしました",
+		"missing": "agent-browser がインストールされていません。実行: npm install -g agent-browser",
+		"noCdp": "リモートデバッグが無効のため、エージェントはこのページにアクセスできません。"
+	},
 	"window": {
 		"minimize": "最小化",
 		"maximize": "最大化",

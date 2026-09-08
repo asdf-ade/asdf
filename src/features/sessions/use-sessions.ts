@@ -1,14 +1,26 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ipc } from "@/ipc/client";
 import {
 	closePane as closeIn,
 	type DropTarget,
 	emptyWindow,
 	focusPane as focusIn,
+	leaves,
 	movePane as moveIn,
 	openPane,
 	type PaneWindow,
 } from "./panes";
 import type { Pane, Project, Session } from "./types";
+
+/** The browser views the panes of one window hold, so closing can end them. */
+const browsersOf = (window: PaneWindow, sessionId?: string) =>
+	window.groups
+		.flatMap((group) => group.panes)
+		.filter(
+			(pane): pane is Extract<Pane, { kind: "browser" }> =>
+				pane.kind === "browser" &&
+				(sessionId === undefined || pane.sessionId === sessionId),
+		);
 
 // Workspaces outlive the app; terminals do not. So the names are written to
 // storage and everything else starts empty.
@@ -156,12 +168,21 @@ export function useSessions() {
 	);
 
 	// A terminal tab is the terminal: closing it ends the shell, the way a
-	// terminal window does. Files, issues and pull requests are only views.
+	// terminal window does, and the browsers that terminal's agent was driving
+	// go with it. Files, issues and pull requests are only views; a browser is
+	// a live page, so closing its tab ends the page.
 	const closePane = useCallback(
 		(id: string) => {
 			const pane = window.groups
 				.flatMap((group) => group.panes)
 				.find((item) => item.id === id);
+			const owned =
+				pane?.kind === "session"
+					? browsersOf(window, pane.sessionId)
+					: pane?.kind === "browser"
+						? [pane]
+						: [];
+			for (const browser of owned) void ipc.browserClose(browser.browserId);
 			if (pane?.kind === "session")
 				setSessions((previous) =>
 					previous.filter((session) => session.id !== pane.sessionId),
@@ -169,10 +190,29 @@ export function useSessions() {
 			setWindows((previous) => {
 				const current = previous[activeProjectId];
 				if (!current) return previous;
-				return { ...previous, [activeProjectId]: closeIn(current, id) };
+				let next = closeIn(current, id);
+				for (const browser of owned) next = closeIn(next, browser.id);
+				return { ...previous, [activeProjectId]: next };
 			});
 		},
 		[activeProjectId, window],
+	);
+
+	// A browser opens as a tab in the active group, the way a new terminal
+	// does — not split off. The person splits it later by dragging, if they
+	// want. The view already exists in the main process; this is only its tab.
+	const openBrowser = useCallback(
+		(sessionId: string, browserId: number) => {
+			const session = sessions.find((item) => item.id === sessionId);
+			if (!session) return;
+			openIn(session.projectId, {
+				kind: "browser",
+				id: `browser:${browserId}`,
+				sessionId,
+				browserId,
+			});
+		},
+		[sessions, openIn],
 	);
 
 	// A terminal opens in its tab the moment it is made. The title is the
@@ -200,9 +240,11 @@ export function useSessions() {
 		[createTerminal],
 	);
 
-	// Forgetting a workspace closes its terminals.
+	// Forgetting a workspace closes its terminals, and their browsers.
 	const removeWorkspace = useCallback(
 		(projectId: string) => {
+			for (const browser of browsersOf(windows[projectId] ?? emptyWindow()))
+				void ipc.browserClose(browser.browserId);
 			setProjects((previous) => {
 				const next = previous.filter((item) => item.id !== projectId);
 				if (projectId === activeProjectId)
@@ -214,7 +256,7 @@ export function useSessions() {
 			);
 			setWindows(({ [projectId]: _dropped, ...rest }) => rest);
 		},
-		[activeProjectId],
+		[activeProjectId, windows],
 	);
 
 	return {
@@ -223,6 +265,10 @@ export function useSessions() {
 		/** Every open tab of the window, across its groups. */
 		panes: window.groups.flatMap((group) => group.panes),
 		paneGroups: window.groups,
+		/** How the groups are arranged, and their order on screen. */
+		layout: window.layout,
+		groupOrder: leaves(window.layout),
+		openBrowser,
 		activeGroupId: activeGroup.id,
 		focusGroup,
 		movePane,

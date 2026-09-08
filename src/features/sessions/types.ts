@@ -30,5 +30,7 @@ export type Project = {
 export type Pane =
 	| { kind: "session"; id: string; sessionId: string }
 	| { kind: "file"; id: string; sessionId: string; dir: string; path: string }
+	/** A live browser the terminal's agent drives; it belongs to that terminal. */
+	| { kind: "browser"; id: string; sessionId: string; browserId: number }
 	| { kind: "issue"; id: string; number: number }
 	| { kind: "pull"; id: string; number: number };

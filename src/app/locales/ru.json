@@ -2,6 +2,19 @@
 	"app": {
 		"title": "asdf"
 	},
+	"browser": {
+		"title": "Браузер",
+		"open": "Новый браузер",
+		"address": "Адрес",
+		"back": "Назад",
+		"forward": "Вперёд",
+		"reload": "Обновить",
+		"connect": "Агент:",
+		"copy": "Скопировать команду",
+		"copied": "Скопировано",
+		"missing": "agent-browser не установлен. Выполните: npm install -g agent-browser",
+		"noCdp": "Удалённая отладка выключена, поэтому агент не может открыть эту страницу."
+	},
 	"window": {
 		"minimize": "Свернуть",
 		"maximize": "Развернуть",

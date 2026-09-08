@@ -2,6 +2,19 @@
 	"app": {
 		"title": "asdf"
 	},
+	"browser": {
+		"title": "Navegador",
+		"open": "Nuevo navegador",
+		"address": "Dirección",
+		"back": "Atrás",
+		"forward": "Adelante",
+		"reload": "Recargar",
+		"connect": "Agente:",
+		"copy": "Copiar el comando",
+		"copied": "Copiado",
+		"missing": "agent-browser no está instalado. Ejecuta: npm install -g agent-browser",
+		"noCdp": "La depuración remota está desactivada; un agente no puede acceder a esta página."
+	},
 	"window": {
 		"minimize": "Minimizar",
 		"maximize": "Maximizar",

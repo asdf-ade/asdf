@@ -53,6 +53,31 @@ export const UPDATER_PROGRESS_EVENT = "updater://progress";
  */
 export const WINDOW_CLOSE_REQUESTED_EVENT = "window://close-requested";
 
+/** A browser view the main process holds for a pane. */
+export type BrowserInfo = {
+	id: number;
+	url: string;
+	title: string;
+	canGoBack: boolean;
+	canGoForward: boolean;
+	loading: boolean;
+	/** The agent-browser session pinned to this page, once the app has bound
+	 *  one; an agent that uses it drives this pane and nothing else. */
+	session: string | null;
+};
+
+/** How an agent reaches the app's browser views over CDP, once known. */
+export type BrowserEndpoint = {
+	/** `ws://127.0.0.1:<port>/devtools/browser/<id>`, or null when remote
+	 *  debugging failed to start. */
+	cdp: string | null;
+	/** Whether `agent-browser` was found on PATH, so the pane can say so. */
+	agentBrowser: boolean;
+};
+
+/** Emitted with a `BrowserInfo` whenever a browser view's page changes. */
+export const BROWSER_STATE_EVENT = "browser://state";
+
 // --- What the side panel shows about the folder a terminal is in -----------
 
 /** Colour in the tree comes from git, the same way an editor does it. */

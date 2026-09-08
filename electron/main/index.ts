@@ -9,10 +9,12 @@ import {
 	shell,
 } from "electron";
 import {
+	BROWSER_STATE_EVENT,
 	TERMINAL_EXIT_EVENT,
 	TERMINAL_OUTPUT_EVENT,
 	WINDOW_CLOSE_REQUESTED_EVENT,
 } from "@/ipc/bindings";
+import { Browsers } from "./browser";
 import * as repo from "./repo";
 import { ok } from "./result";
 import { Registry } from "./terminal";
@@ -22,6 +24,13 @@ import { open as openWorkspace } from "./workspace";
 const directory = path.dirname(fileURLToPath(import.meta.url));
 
 const terminals = new Registry();
+
+// Every WebContents becomes a CDP target on this port, including the browser
+// panes — that is how agent-browser drives what the person sees. Port 0 lets
+// Chromium pick a free one and write it to DevToolsActivePort; `Browsers` reads
+// it back. It also exposes the app's own window on localhost, which is the
+// trade a local developer tool makes; see architecture.md.
+app.commandLine.appendSwitch("remote-debugging-port", "0");
 
 // The app draws its own chrome and has no use for a menu bar. macOS keeps its
 // default one, where the application menu is also what binds copy, paste and
@@ -95,6 +104,47 @@ function createWindow(): BrowserWindow {
 }
 
 const updater = createUpdater(() => main);
+const browsers = new Browsers(
+	() => main,
+	(info) => main?.webContents.send(BROWSER_STATE_EVENT, info),
+);
+
+ipcMain.handle("browser://endpoint", () => browsers.describe().then(ok));
+ipcMain.handle("browser://open", (_event, { url }: { url: string }) =>
+	browsers.open(url),
+);
+ipcMain.handle(
+	"browser://place",
+	(
+		_event,
+		{
+			id,
+			bounds,
+		}: {
+			id: number;
+			bounds: { x: number; y: number; width: number; height: number };
+		},
+	) => browsers.place(id, bounds),
+);
+ipcMain.handle(
+	"browser://navigate",
+	(_event, { id, url }: { id: number; url: string }) =>
+		browsers.navigate(id, url),
+);
+ipcMain.handle(
+	"browser://go",
+	(
+		_event,
+		{ id, where }: { id: number; where: "back" | "forward" | "reload" },
+	) => browsers.go(id, where),
+);
+ipcMain.handle("browser://close", (_event, { id }: { id: number }) =>
+	browsers.close(id),
+);
+ipcMain.handle("browser://cover", (_event, { hidden }: { hidden: boolean }) => {
+	browsers.cover(hidden);
+	return ok(null);
+});
 
 ipcMain.handle("open_workspace", (_event, { path: raw }: { path: string }) =>
 	openWorkspace(raw),
@@ -232,9 +282,11 @@ if (!app.requestSingleInstanceLock()) {
 		if (process.platform !== "darwin") app.quit();
 	});
 
-	// Killing the shells here is what keeps a quit from leaving one behind.
+	// Killing the shells here is what keeps a quit from leaving one behind; the
+	// browser views go with them.
 	app.on("before-quit", () => {
 		closing = true;
 		terminals.closeAll();
+		browsers.closeAll();
 	});
 }

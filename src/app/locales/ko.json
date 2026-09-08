@@ -2,6 +2,19 @@
 	"app": {
 		"title": "asdf"
 	},
+	"browser": {
+		"title": "브라우저",
+		"open": "새 브라우저",
+		"address": "주소",
+		"back": "뒤로",
+		"forward": "앞으로",
+		"reload": "새로 고침",
+		"connect": "에이전트:",
+		"copy": "명령 복사",
+		"copied": "복사됨",
+		"missing": "agent-browser가 설치되어 있지 않습니다. 실행: npm install -g agent-browser",
+		"noCdp": "원격 디버깅이 꺼져 있어 에이전트가 이 페이지에 접근할 수 없습니다."
+	},
 	"window": {
 		"minimize": "최소화",
 		"maximize": "최대화",

@@ -47,6 +47,7 @@ electron/
 │  ├─ result.ts    IpcResult — the one shape every handler returns
 │  ├─ terminal.ts  the pty registry
 │  ├─ workspace.ts directory inspection
+│  ├─ browser.ts   the WebContentsView registry behind the browser panes
 │  └─ updater.ts   electron-updater, wrapped in the three calls the UI makes
 └─ preload/
    └─ index.ts     contextBridge: `invoke` and `on`, and nothing else
@@ -60,6 +61,33 @@ starting Electron: `terminal.ts` and `workspace.ts` import nothing from
 Keep that property. A module that reaches for `app` or `BrowserWindow` belongs in
 `index.ts`, and moving one out of reach of the tests is a bigger cost than the
 convenience it buys.
+
+## The browser panes
+
+A browser pane shows a live web page an agent drives. Two shapes were possible:
+launch [agent-browser](https://github.com/vercel-labs/agent-browser)'s own Chrome
+and try to host its window, or make the page a part of the app and let
+agent-browser attach to it. The second is what shipped, because only it makes the
+browser a real pane the layout can split and drag like any other tab.
+
+Each pane is an Electron `WebContentsView` the main process owns
+(`browser.ts`), placed over the renderer's DOM at the rectangle the pane reports
+on every move and resize. It is native, so it sits *above* the DOM: while a tab
+is dragged, `browser://cover` hides every view so the drop zones can take the
+pointer.
+
+The app launches with `--remote-debugging-port=0`, so every `WebContents` — the
+panes and the app's own window — is a CDP target. Chromium writes the chosen port
+to `DevToolsActivePort`; `browser.ts` reads it and hands out the WebSocket form,
+which agent-browser attaches to at once where the bare port stalls. On open, the
+main process pins an agent-browser session (`asdf-browser-<id>`) to the pane's
+tab with `--pin-tab`, so an agent that names that session drives that pane and
+never the app's own window. The pane shows the one-line command for it.
+
+agent-browser is found on `PATH`, never bundled; the pane says what to install
+when it is missing. This turns remote debugging on for a local developer tool,
+which is the trade named here on purpose: any local process can drive the app's
+Chromium while it runs.
 
 ## The IPC contract
 

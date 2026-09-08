@@ -3,6 +3,7 @@ import {
 	CircleDot,
 	GitBranch,
 	GitPullRequest,
+	Globe,
 	type LucideIcon,
 	Plus,
 	Undo2,
@@ -13,7 +14,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ipc } from "@/ipc/client";
 import { cn } from "@/lib/utils";
-import type { DropTarget } from "../panes";
+import type { DropTarget, Side } from "../panes";
 import type {
 	DiffRow,
 	Issue,
@@ -33,18 +34,44 @@ const PANE_MIME = "application/x-asdf-pane";
 const tabIcon: Partial<Record<Pane["kind"], LucideIcon>> = {
 	issue: CircleDot,
 	pull: GitPullRequest,
+	browser: Globe,
 };
 
-function tabLabel(pane: Pane, sessions: Session[]): string {
+function tabLabel(
+	pane: Pane,
+	sessions: Session[],
+	browserTitle: (browserId: number) => string,
+): string {
 	switch (pane.kind) {
 		case "session":
 			return sessions.find((item) => item.id === pane.sessionId)?.title ?? "";
 		case "file":
 			return pane.path.split("/").pop() ?? pane.path;
+		case "browser":
+			return browserTitle(pane.browserId);
 		default:
 			return `#${pane.number}`;
 	}
 }
+
+/**
+ * Which edge of the body the pointer is nearest, as a share of the body's
+ * size. Every point maps to a side, so the whole half towards an edge is that
+ * edge's drop zone — no thin strip to hit.
+ */
+function sideAt(x: number, y: number, width: number, height: number): Side {
+	const dx = x / width - 0.5;
+	const dy = y / height - 0.5;
+	if (Math.abs(dx) >= Math.abs(dy)) return dx < 0 ? "left" : "right";
+	return dy < 0 ? "top" : "bottom";
+}
+
+const halfOf: Record<Side, string> = {
+	left: "inset-y-0 left-0 w-1/2",
+	right: "inset-y-0 right-0 w-1/2",
+	top: "inset-x-0 top-0 h-1/2",
+	bottom: "inset-x-0 bottom-0 h-1/2",
+};
 
 type Props = {
 	panes: Pane[];
@@ -64,6 +91,9 @@ type Props = {
 	onFocus: (id: string) => void;
 	onClose: (id: string) => void;
 	onNewSession: () => void;
+	/** Open a browser as a new tab in this group, like the terminal `+` does.
+	 *  Null when the window has no session yet to own one. */
+	onOpenBrowser: (() => void) | null;
 	/** A tab is being dragged somewhere in the window, so show where it can
 	 *  land. */
 	dragging: boolean;
@@ -76,6 +106,12 @@ type Props = {
 	trailing?: ReactNode;
 	/** Owned by the terminal work. Rendered for the open session tab. */
 	renderAgent: (session: Session) => ReactNode;
+	/** Owned by the browser work. Rendered for a browser tab; `visible` says
+	 *  whether it is the showing one, since a native view must be hidden by
+	 *  hand. */
+	renderBrowser: (browserId: number, visible: boolean) => ReactNode;
+	/** What a browser tab is called: its page title, once it has one. */
+	browserTitle: (browserId: number) => string;
 };
 
 export function PaneArea({
@@ -93,6 +129,7 @@ export function PaneArea({
 	onFocus,
 	onClose,
 	onNewSession,
+	onOpenBrowser,
 	dragging,
 	onDragStart,
 	onDragEnd,
@@ -100,15 +137,17 @@ export function PaneArea({
 	leading,
 	trailing,
 	renderAgent,
+	renderBrowser,
+	browserTitle,
 }: Props) {
 	const { t } = useTranslation();
 	const active = panes.find((pane) => pane.id === activeId) ?? panes[0];
 	const sessionId =
-		active && (active.kind === "session" || active.kind === "file")
+		active && active.kind !== "issue" && active.kind !== "pull"
 			? active.sessionId
 			: undefined;
 	const session = sessions.find((item) => item.id === sessionId);
-	const [over, setOver] = useState<"left" | "right" | null>(null);
+	const [over, setOver] = useState<Side | null>(null);
 
 	const accept = (event: DragEvent) => {
 		if (!dragging) return;
@@ -121,6 +160,23 @@ export function PaneArea({
 		const id = event.dataTransfer.getData(PANE_MIME);
 		if (id) onDrop(id, target);
 	};
+	// Where in the body the pointer is decides the side; the highlight follows.
+	const sideOf = (event: DragEvent) => {
+		const rect = event.currentTarget.getBoundingClientRect();
+		return sideAt(
+			event.clientX - rect.left,
+			event.clientY - rect.top,
+			rect.width,
+			rect.height,
+		);
+	};
+
+	// Browser tabs that are not showing keep their native view hidden; the
+	// showing one is placed over its body.
+	const browsers = panes.filter(
+		(pane): pane is Extract<Pane, { kind: "browser" }> =>
+			pane.kind === "browser",
+	);
 
 	// Nothing open: the one thing to do is start a terminal.
 	const empty = (
@@ -159,7 +215,7 @@ export function PaneArea({
 					<Tab
 						key={pane.id}
 						pane={pane}
-						label={tabLabel(pane, sessions)}
+						label={tabLabel(pane, sessions, browserTitle)}
 						active={pane.id === active?.id}
 						focused={focused}
 						onFocus={() => onFocus(pane.id)}
@@ -178,6 +234,21 @@ export function PaneArea({
 				>
 					<Plus className="size-3.5" />
 				</Button>
+				{/* A browser opens as another tab in this group, the way the terminal
+				    `+` beside it does. The person splits it off by dragging, if they
+				    want it beside the terminal rather than behind it. */}
+				{onOpenBrowser && (
+					<Button
+						size="icon"
+						variant="ghost"
+						aria-label={t("browser.open")}
+						title={t("browser.open")}
+						onClick={onOpenBrowser}
+						className="my-1.5 size-6 shrink-0"
+					>
+						<Globe className="size-3.5" />
+					</Button>
+				)}
 				{trailing && <div className="ml-auto flex shrink-0">{trailing}</div>}
 			</div>
 
@@ -192,7 +263,7 @@ export function PaneArea({
 					<PullBody
 						pull={pulls.find((item) => item.number === active.number)}
 					/>
-				) : !session ? (
+				) : active.kind === "browser" ? null : !session ? (
 					empty
 				) : active.kind === "session" ? (
 					<SessionBody>{renderAgent(session)}</SessionBody>
@@ -207,28 +278,48 @@ export function PaneArea({
 					/>
 				)}
 
-				{/* While a tab is in the air, the body splits into two landing zones:
-			    dropping on a side opens a new group on that side. */}
+				{/* Every browser tab stays mounted so its view keeps its page; only
+				    the showing one is placed, the rest are parked off screen. */}
+				{browsers.map((pane) => (
+					<div
+						key={pane.id}
+						className={cn(
+							"absolute inset-0 flex flex-col",
+							pane.id !== active?.id && "hidden",
+						)}
+					>
+						{renderBrowser(pane.browserId, pane.id === active?.id)}
+					</div>
+				))}
+
+				{/* While a tab is in the air the whole body is a landing zone. The
+				    half of it nearest the pointer is the side the new group opens on,
+				    and is lit so the drop is never a guess. */}
 				{dragging && (
-					<div className="absolute inset-0 z-10 flex">
-						{(["left", "right"] as const).map((side) => (
-							// A landing zone, not a control: nothing to focus or press.
-							<button
-								key={side}
-								type="button"
-								tabIndex={-1}
-								aria-hidden="true"
-								onDragOver={accept}
-								onDragEnter={() => setOver(side)}
-								onDragLeave={() => setOver(null)}
-								onDrop={(event) => dropped(event, { split: groupId, side })}
+					// A landing zone, not a control: nothing to focus or press.
+					<button
+						type="button"
+						tabIndex={-1}
+						aria-hidden="true"
+						onDragOver={(event) => {
+							accept(event);
+							if (dragging) setOver(sideOf(event));
+						}}
+						onDragLeave={() => setOver(null)}
+						onDrop={(event) =>
+							dropped(event, { split: groupId, side: sideOf(event) })
+						}
+						className="absolute inset-0 z-10"
+					>
+						{over && (
+							<span
 								className={cn(
-									"flex-1 transition-colors",
-									over === side && "bg-ring/20",
+									"pointer-events-none absolute bg-ring/20 transition-all",
+									halfOf[over],
 								)}
 							/>
-						))}
-					</div>
+						)}
+					</button>
 				)}
 			</div>
 		</div>

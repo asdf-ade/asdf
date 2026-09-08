@@ -2,6 +2,7 @@ import { PanelLeft, PanelRight, Settings } from "lucide-react";
 import {
 	Fragment,
 	type PointerEvent,
+	type ReactNode,
 	useCallback,
 	useEffect,
 	useState,
@@ -9,9 +10,11 @@ import {
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 
+import { BrowserPane } from "@/features/browser/components/BrowserPane";
 import { PaneArea } from "@/features/sessions/components/PaneArea";
 import { SessionSidebar } from "@/features/sessions/components/SessionSidebar";
 import { SidePanel } from "@/features/sessions/components/SidePanel";
+import type { Layout } from "@/features/sessions/panes";
 import { useRepo } from "@/features/sessions/use-repo";
 import { useSessions } from "@/features/sessions/use-sessions";
 import { TerminalPane } from "@/features/terminal/components/TerminalPane";
@@ -19,6 +22,7 @@ import { useTerminalCwd } from "@/features/terminal/use-terminal-cwd";
 import { UpdateChip } from "@/features/updater/components/UpdateChip";
 import { UpdateDialog } from "@/features/updater/components/UpdateDialog";
 import { useUpdater } from "@/features/updater/use-updater";
+import { ipc } from "@/ipc/client";
 import { platform } from "@/ipc/platform";
 import { cn } from "@/lib/utils";
 import { NewWorkspaceDialog } from "./NewWorkspaceDialog";
@@ -93,6 +97,37 @@ function WindowControls() {
 	);
 }
 
+/**
+ * The layout tree on screen: a row lays its children side by side, a column
+ * stacks them, a leaf is one group of tabs. A hairline sits between siblings.
+ */
+function LayoutView({
+	layout,
+	render,
+}: {
+	layout: Layout;
+	render: (groupId: string) => ReactNode;
+}) {
+	if (layout.kind === "leaf") return <>{render(layout.group)}</>;
+	const row = layout.direction === "row";
+	return (
+		<div className={cn("flex min-h-0 min-w-0 flex-1", !row && "flex-col")}>
+			{layout.children.map((child, index) => (
+				<Fragment
+					key={
+						child.kind === "leaf" ? child.group : `${index}:${child.direction}`
+					}
+				>
+					{index > 0 && (
+						<div className={cn("shrink-0 bg-border", row ? "w-px" : "h-px")} />
+					)}
+					<LayoutView layout={child} render={render} />
+				</Fragment>
+			))}
+		</div>
+	);
+}
+
 /** The hairline between two columns, and the grab zone either side of it. */
 function ResizeHandle({
 	onPointerDown,
@@ -159,6 +194,20 @@ export function App() {
 	);
 	const [sidebarOpen, setSidebarOpen] = useState(true);
 	const [panelOpen, setPanelOpen] = useState(true);
+	// What each browser tab is called, reported by the pane as its page
+	// changes; the strip has no other way to know a native view's title.
+	const [browserTitles, setBrowserTitles] = useState<Record<number, string>>(
+		{},
+	);
+	// The view is made first, so the tab it opens in never points at nothing.
+	// It starts blank; the person or the agent decides where it goes.
+	const openBrowser = useCallback(
+		async (sessionId: string) => {
+			const opened = await ipc.browserOpen("about:blank");
+			if (opened.ok) sessions.openBrowser(sessionId, opened.value.id);
+		},
+		[sessions.openBrowser],
+	);
 	const [sidebarWidth, resizeSidebar] = useResizable(
 		"sidebar",
 		224,
@@ -250,84 +299,128 @@ export function App() {
 				)}
 				{sidebarOpen && <ResizeHandle onPointerDown={resizeSidebar} />}
 
-				{/* One PaneArea per split. The panel toggles and caption buttons
-				    belong to the window, so only the outermost strips carry them. */}
+				{/* One PaneArea per leaf of the layout tree. The panel toggles and
+				    caption buttons belong to the window, so only the first and last
+				    strips on screen carry them. */}
 				<div className="flex min-w-0 flex-1">
-					{sessions.paneGroups.map((group, index) => (
-						<Fragment key={group.id}>
-							{index > 0 && <div className="w-px shrink-0 bg-border" />}
-							<PaneArea
-								panes={group.panes}
-								sessions={sessions.sessions}
-								repo={repo.snapshot}
-								issues={repo.issues}
-								pulls={repo.pulls}
-								reviewOf={repo.reviewOf}
-								onReview={(file, state) => void repo.review(file, state)}
-								activeId={group.activeId}
-								groupId={group.id}
-								focused={group.id === sessions.activeGroupId}
-								onFocusGroup={() => sessions.focusGroup(group.id)}
-								onFocus={sessions.focusPane}
-								onClose={sessions.closePane}
-								onNewSession={() => {
-									if (!sessions.activeProject) return newWorkspace();
-									sessions.focusGroup(group.id);
-									sessions.createTerminal(
-										sessions.activeProjectId,
-										terminalTitle(sessions.activeProjectId),
-									);
-								}}
-								dragging={dragging}
-								onDragStart={() => setDragging(true)}
-								onDragEnd={() => setDragging(false)}
-								onDrop={(paneId, target) => {
-									setDragging(false);
-									sessions.movePane(paneId, target);
-								}}
-								renderAgent={(session) => (
-									<TerminalPane
-										cwd={null}
-										onSession={(id) => bindPty(session.id, id)}
-									/>
-								)}
-								// With the sidebar closed the strip is the window's left edge,
-								// and on macOS the traffic lights sit there.
-								leading={
-									index === 0 && (
-										<div
-											className={cn(
-												"flex shrink-0",
-												!sidebarOpen &&
-													(platform.isMac ? "pl-[88px]" : "pl-1.5"),
-											)}
-										>
-											<PanelToggle
-												icon={PanelLeft}
-												label={t("window.toggleSidebar")}
-												onClick={() => setSidebarOpen((open) => !open)}
-											/>
-										</div>
-									)
-								}
-								trailing={
-									index === sessions.paneGroups.length - 1 && (
-										<>
-											<PanelToggle
-												icon={PanelRight}
-												label={t("window.togglePanel")}
-												onClick={() => setPanelOpen((open) => !open)}
-												// Closed, the strip is the window's right edge: keep the
-												// button off it, unless the caption buttons sit there anyway.
-												className={cn(!panelOpen && platform.isMac && "mr-2.5")}
-											/>
-											{!platform.isMac && <WindowControls />}
-										</>
-									)
-								}
-							/>
-						</Fragment>
-					))}
+					<LayoutView
+						layout={sessions.layout}
+						render={(groupId) => {
+							const group = sessions.paneGroups.find((g) => g.id === groupId);
+							if (!group) return null;
+							const order = sessions.groupOrder;
+							const first = order[0] === group.id;
+							const last = order[order.length - 1] === group.id;
+							return (
+								<PaneArea
+									panes={group.panes}
+									sessions={sessions.sessions}
+									repo={repo.snapshot}
+									issues={repo.issues}
+									pulls={repo.pulls}
+									reviewOf={repo.reviewOf}
+									onReview={(file, state) => void repo.review(file, state)}
+									activeId={group.activeId}
+									groupId={group.id}
+									focused={group.id === sessions.activeGroupId}
+									onFocusGroup={() => sessions.focusGroup(group.id)}
+									onFocus={sessions.focusPane}
+									onClose={sessions.closePane}
+									onNewSession={() => {
+										if (!sessions.activeProject) return newWorkspace();
+										sessions.focusGroup(group.id);
+										sessions.createTerminal(
+											sessions.activeProjectId,
+											terminalTitle(sessions.activeProjectId),
+										);
+									}}
+									onOpenBrowser={
+										sessions.activeSession
+											? () => {
+													const session = sessions.activeSession;
+													if (!session) return;
+													sessions.focusGroup(group.id);
+													void openBrowser(session.id);
+												}
+											: null
+									}
+									dragging={dragging}
+									onDragStart={() => {
+										setDragging(true);
+										// Native views sit above the DOM and would swallow the drop.
+										void ipc.browserCover(true);
+									}}
+									onDragEnd={() => {
+										setDragging(false);
+										void ipc.browserCover(false);
+									}}
+									onDrop={(paneId, target) => {
+										setDragging(false);
+										void ipc.browserCover(false);
+										sessions.movePane(paneId, target);
+									}}
+									renderAgent={(session) => (
+										<TerminalPane
+											cwd={null}
+											onSession={(id) => bindPty(session.id, id)}
+										/>
+									)}
+									renderBrowser={(browserId, visible) => (
+										<BrowserPane
+											browserId={browserId}
+											visible={visible}
+											onTitle={(title) =>
+												setBrowserTitles((previous) =>
+													previous[browserId] === title
+														? previous
+														: { ...previous, [browserId]: title },
+												)
+											}
+										/>
+									)}
+									browserTitle={(browserId) =>
+										browserTitles[browserId] || t("browser.title")
+									}
+									// With the sidebar closed the strip is the window's left edge,
+									// and on macOS the traffic lights sit there.
+									leading={
+										first && (
+											<div
+												className={cn(
+													"flex shrink-0",
+													!sidebarOpen &&
+														(platform.isMac ? "pl-[88px]" : "pl-1.5"),
+												)}
+											>
+												<PanelToggle
+													icon={PanelLeft}
+													label={t("window.toggleSidebar")}
+													onClick={() => setSidebarOpen((open) => !open)}
+												/>
+											</div>
+										)
+									}
+									trailing={
+										last && (
+											<>
+												<PanelToggle
+													icon={PanelRight}
+													label={t("window.togglePanel")}
+													onClick={() => setPanelOpen((open) => !open)}
+													// Closed, the strip is the window's right edge: keep the
+													// button off it, unless the caption buttons sit there anyway.
+													className={cn(
+														!panelOpen && platform.isMac && "mr-2.5",
+													)}
+												/>
+												{!platform.isMac && <WindowControls />}
+											</>
+										)
+									}
+								/>
+							);
+						}}
+					/>
 				</div>
 
 				{panelOpen && <ResizeHandle onPointerDown={resizePanel} />}

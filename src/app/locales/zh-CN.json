@@ -2,6 +2,19 @@
 	"app": {
 		"title": "asdf"
 	},
+	"browser": {
+		"title": "浏览器",
+		"open": "新建浏览器",
+		"address": "地址",
+		"back": "后退",
+		"forward": "前进",
+		"reload": "刷新",
+		"connect": "代理：",
+		"copy": "复制命令",
+		"copied": "已复制",
+		"missing": "未安装 agent-browser。请运行：npm install -g agent-browser",
+		"noCdp": "远程调试已关闭，代理无法访问此页面。"
+	},
 	"window": {
 		"minimize": "最小化",
 		"maximize": "最大化",
