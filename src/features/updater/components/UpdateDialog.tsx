@@ -13,7 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { platform } from "@/ipc/platform";
 import type { UpdateState } from "../types";
 
-const RELEASES_URL = "https://github.com/teamBuzzle/asdf/releases";
+const RELEASES_URL = "https://github.com/asdf-ade/asdf/releases";
 
 function formatBytes(bytes: number): string {
 	const mb = bytes / 1024 / 1024;
