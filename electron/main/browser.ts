@@ -98,13 +98,18 @@ export class Browsers {
 	}
 
 	/**
-	 * Pins an agent-browser session to this view's tab, so an agent using that
+	 * Points an agent-browser session at this view's tab, so an agent using that
 	 * session drives this pane and nothing else. Without it agent-browser acts
 	 * on whichever tab Chromium calls active — which is the app's own window
 	 * as often as not, and an agent would navigate the app away from itself.
 	 *
 	 * The view is found among the targets by a title stamped on it, then the
-	 * session is switched to it with `--pin-tab`, which is sticky.
+	 * session is switched to it, which the session remembers.
+	 *
+	 * ponytail: a `--pin-tab` flag would make the binding strict, so a closed
+	 * tab fails loudly instead of falling through to a neighbour. It landed
+	 * after 0.27, the version this was written against, and asking for it there
+	 * is an "Unknown command". Add it once the floor moves.
 	 */
 	private async bind(id: number, view: WebContentsView): Promise<void> {
 		const { cdp, agentBrowser } = await this.describe();
@@ -137,7 +142,6 @@ export class Browsers {
 				cdp,
 				"--session",
 				session,
-				"--pin-tab",
 				"tab",
 				tab.tabId,
 				"--json",
