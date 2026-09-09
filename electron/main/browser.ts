@@ -18,6 +18,10 @@ export class Browsers {
 	private readonly views = new Map<number, WebContentsView>();
 	/** The agent-browser session pinned to each view, once bound. */
 	private readonly sessions = new Map<number, string>();
+	/** Whether each view's own pane wants it on screen, ignoring `cover`. */
+	private readonly shown = new Map<number, boolean>();
+	/** Set while a drag needs the pointer to reach the DOM under these views. */
+	private covered = false;
 	private nextId = 0;
 	private endpoint: BrowserEndpoint | null = null;
 
@@ -167,19 +171,33 @@ export class Browsers {
 	): IpcResult<null> {
 		const view = this.views.get(id);
 		if (!view) return fail(noSuchBrowser(id));
+		const width = Math.max(0, Math.round(bounds.width));
+		const height = Math.max(0, Math.round(bounds.height));
 		view.setBounds({
 			x: Math.round(bounds.x),
 			y: Math.round(bounds.y),
-			width: Math.max(0, Math.round(bounds.width)),
-			height: Math.max(0, Math.round(bounds.height)),
+			width,
+			height,
 		});
-		view.setVisible(bounds.width > 0 && bounds.height > 0);
+		// A pane whose tab is not the one showing reports no size at all, which is
+		// how it asks to be put away. Remembered, so uncovering can tell the two
+		// apart.
+		this.shown.set(id, width > 0 && height > 0);
+		view.setVisible(!this.covered && width > 0 && height > 0);
 		return ok(null);
 	}
 
-	/** Hides every view, so the renderer's own overlays can take the pointer. */
+	/**
+	 * Hides every view while the renderer needs the pointer — a tab being
+	 * dragged, whose drop zones are DOM underneath these.
+	 *
+	 * Uncovering restores what each view was doing, not blanket visibility: a
+	 * pane parked behind another tab asked to be hidden and is still asking.
+	 */
 	cover(hidden: boolean): void {
-		for (const view of this.views.values()) view.setVisible(!hidden);
+		this.covered = hidden;
+		for (const [id, view] of this.views)
+			view.setVisible(!hidden && (this.shown.get(id) ?? false));
 	}
 
 	navigate(id: number, url: string): IpcResult<null> {
@@ -203,6 +221,7 @@ export class Browsers {
 		const view = this.views.get(id);
 		if (view) {
 			this.views.delete(id);
+			this.shown.delete(id);
 			this.window()?.contentView.removeChildView(view);
 			view.webContents.close();
 		}
