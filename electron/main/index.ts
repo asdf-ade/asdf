@@ -45,7 +45,7 @@ let closing = false;
 // exposes, the frame before first paint. Left at the default it is white, which
 // flashes in a dark window. Mirrors --background in src/index.css.
 const background = () =>
-	nativeTheme.shouldUseDarkColors ? "#242424" : "#ffffff";
+	nativeTheme.shouldUseDarkColors ? "#0a0a0a" : "#ffffff";
 
 function createWindow(): BrowserWindow {
 	const window = new BrowserWindow({
