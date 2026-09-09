@@ -1,4 +1,4 @@
-import { FolderOpen, GitBranch, SquareTerminal } from "lucide-react";
+import { FolderOpen, GitBranch, Square } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,10 @@ import { ipc } from "@/ipc/client";
 import { platform } from "@/ipc/platform";
 
 /** How the workspace gets the folder it opens in. */
-type Source = "none" | "folder" | "clone";
+type Source = "empty" | "folder" | "clone";
 
 const SOURCES = [
-	{ source: "none", icon: SquareTerminal },
+	{ source: "empty", icon: Square },
 	{ source: "folder", icon: FolderOpen },
 	{ source: "clone", icon: GitBranch },
 ] as const;
@@ -38,13 +38,9 @@ const basename = (path: string) =>
 /**
  * A workspace is a name and a folder. There are three ways to arrive at the
  * folder and they are asked as three, rather than as one field with rules:
- * open one that exists, clone a repository into a new one, or name no folder
- * and leave the shells to decide where they are.
- *
- * The third is not the lesser one and is not called empty. It is the workspace
- * that has not been pointed anywhere, which is the right shape for work that
- * moves between folders — every terminal in it is still a shell that can go
- * where the work is.
+ * open one that exists, clone a repository into a new one, or have none at all
+ * and leave the shells to decide where they are, which is what a workspace was
+ * before it could hold a folder.
  *
  * Making an empty folder is not a fourth: the OS picker has a "New folder"
  * button, and re-implementing it here would be a worse version of it.
@@ -200,7 +196,7 @@ export function NewWorkspaceDialog({ open, onOpenChange, onCreate }: Props) {
 							</Field>
 						)}
 
-						{source !== "none" && (
+						{source !== "empty" && (
 							<Field
 								label={t(
 									source === "clone"

@@ -131,8 +131,8 @@
 			"urlPlaceholder": "https://github.com/owner/repo.git",
 			"cloning": "正在克隆…",
 			"source": {
-				"none": "自由开始",
-				"noneHint": "先不指定文件夹。终端在 shell 的默认目录中打开，之后可前往任何需要的位置。",
+				"empty": "空工作区",
+				"emptyHint": "不指定文件夹，自由开始。",
 				"folder": "打开文件夹",
 				"folderHint": "选择已有文件夹，或在选择器中新建一个",
 				"clone": "克隆仓库",

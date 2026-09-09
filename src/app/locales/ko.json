@@ -131,8 +131,8 @@
 			"urlPlaceholder": "https://github.com/owner/repo.git",
 			"cloning": "복제 중…",
 			"source": {
-				"none": "자유롭게 시작",
-				"noneHint": "폴더를 정하지 않습니다. 터미널이 셸 기본 위치에서 열리고, 거기서 어디로든 옮겨 작업합니다.",
+				"empty": "빈 워크스페이스",
+				"emptyHint": "폴더 없이 자유롭게 시작합니다.",
 				"folder": "폴더 열기",
 				"folderHint": "기존 폴더를 고르거나, 선택 창에서 새로 만듭니다",
 				"clone": "저장소 복제",
