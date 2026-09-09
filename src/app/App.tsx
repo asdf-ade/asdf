@@ -15,6 +15,7 @@ import { PaneArea } from "@/features/sessions/components/PaneArea";
 import { SessionSidebar } from "@/features/sessions/components/SessionSidebar";
 import { SidePanel } from "@/features/sessions/components/SidePanel";
 import type { Layout } from "@/features/sessions/panes";
+import type { Session } from "@/features/sessions/types";
 import { useRepo } from "@/features/sessions/use-repo";
 import { useSessions } from "@/features/sessions/use-sessions";
 import { TerminalPane } from "@/features/terminal/components/TerminalPane";
@@ -269,26 +270,25 @@ export function App() {
 	// on macOS the traffic lights are the window's own, on the left.
 	const panelHoldsControls = !platform.isMac && panelOpen;
 
-	// Terminals are numbered within their workspace, the way a shell numbers
-	// its own windows, so a name is never asked for.
-	const terminalTitle = (projectId: string) =>
-		t("session.terminalTitle", {
-			n:
-				sessions.sessions.filter((session) => session.projectId === projectId)
-					.length + 1,
-		});
+	// Sessions are numbered within their workspace, the way a shell numbers its
+	// own windows, so a name is never asked for. Written here rather than kept
+	// on the session, so switching language renames them.
+	const sessionTitle = (session: Session) =>
+		t("session.terminalTitle", { n: session.ordinal });
 
 	// A workspace opens empty and its "+" fills it. With no workspace yet, "+"
 	// makes one first.
 	const newWorkspace = () => setWorkspaceOpen(true);
 
-	// What "+" resolves to once the dialog answers.
+	// What "+" resolves to once the dialog answers. A terminal is a session, so
+	// asking for one opens another window of the same workspace rather than a
+	// second terminal in this one.
 	const openTab = (kind: TabKind) => {
 		const projectId = sessions.activeProjectId;
 		if (!projectId) return;
 		if (newTabIn) sessions.focusGroup(newTabIn);
 		if (kind === "terminal") {
-			sessions.createTerminal(projectId, terminalTitle(projectId));
+			sessions.createSession(projectId);
 			return;
 		}
 		void openBrowser(projectId);
@@ -325,9 +325,10 @@ export function App() {
 							projects={sessions.projects}
 							sessions={sessions.sessions}
 							browsers={sessions.browsers}
+							sessionTitle={sessionTitle}
 							browserTitle={browserTitle}
 							activeProjectId={sessions.activeProjectId}
-							activeSessionId={active?.id}
+							activeSessionId={sessions.activeSessionId}
 							activePaneId={sessions.activeId}
 							onSelectProject={sessions.selectProject}
 							onOpenSession={sessions.openSession}
@@ -408,6 +409,7 @@ export function App() {
 											}
 										/>
 									)}
+									sessionTitle={sessionTitle}
 									browserTitle={browserTitle}
 									// With the sidebar closed the strip is the window's left edge,
 									// and on macOS the traffic lights sit there.

@@ -107,7 +107,7 @@
 		"newTab": {
 			"title": "新しいタブ",
 			"terminal": "ターミナル",
-			"terminalHint": "このワークスペースのシェル",
+			"terminalHint": "このワークスペースにもう一つのセッション。自分のシェルを持つ",
 			"browser": "ブラウザ",
 			"browserHint": "エージェントが操作できるページ"
 		},
