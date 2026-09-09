@@ -282,13 +282,15 @@ export function App() {
 	// makes one first.
 	const newWorkspace = () => setWorkspaceOpen(true);
 
-	// What "+" resolves to once the dialog answers.
+	// What "+" resolves to once the dialog answers. A terminal is a session, so
+	// asking for one opens another window of the same workspace rather than a
+	// second terminal in this one.
 	const openTab = (kind: TabKind) => {
 		const projectId = sessions.activeProjectId;
 		if (!projectId) return;
 		if (newTabIn) sessions.focusGroup(newTabIn);
 		if (kind === "terminal") {
-			sessions.createTerminal(projectId, terminalTitle(projectId));
+			sessions.createSession(projectId, terminalTitle(projectId));
 			return;
 		}
 		void openBrowser(projectId);
@@ -327,7 +329,7 @@ export function App() {
 							browsers={sessions.browsers}
 							browserTitle={browserTitle}
 							activeProjectId={sessions.activeProjectId}
-							activeSessionId={active?.id}
+							activeSessionId={sessions.activeSessionId}
 							activePaneId={sessions.activeId}
 							onSelectProject={sessions.selectProject}
 							onOpenSession={sessions.openSession}
