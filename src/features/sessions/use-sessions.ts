@@ -11,6 +11,7 @@ import {
 	type PaneWindow,
 	windowOf,
 } from "./panes";
+import { nextOrdinal, siblingOf, successorOf } from "./roster";
 import type { Pane, Project, Session } from "./types";
 
 /** The browser panes a window holds. */
@@ -214,23 +215,19 @@ export function useSessions() {
 			const session = sessions.find((item) => item.id === sessionId);
 			if (!session) return;
 			const held = browsersIn(windows[sessionId] ?? emptyWindow());
-			const heir = sessions.find(
-				(item) => item.id !== sessionId && item.projectId === session.projectId,
-			);
+			const heir = siblingOf(sessions, sessionId);
 			if (!heir)
 				for (const browser of held) void ipc.browserClose(browser.browserId);
 
 			// Worked out here rather than inside the updater: an updater can be
 			// called more than once for one change, and moving the selection is
 			// not something to do twice.
-			const left = sessions.filter((item) => item.id !== sessionId);
 			if (sessionId === activeSessionId) {
-				const sibling =
-					left.find((item) => item.projectId === session.projectId) ?? left[0];
-				setActiveSessionId(sibling?.id ?? "");
-				if (sibling) setActiveProjectId(sibling.projectId);
+				const next = successorOf(sessions, sessionId);
+				setActiveSessionId(next?.id ?? "");
+				if (next) setActiveProjectId(next.projectId);
 			}
-			setSessions(left);
+			setSessions(sessions.filter((item) => item.id !== sessionId));
 			setWindows(({ [sessionId]: _gone, ...rest }) => {
 				if (!heir || held.length === 0) return rest;
 				let inherited = rest[heir.id] ?? emptyWindow();
@@ -306,10 +303,7 @@ export function useSessions() {
 	const createSession = useCallback(
 		(projectId: string) => {
 			const id = `s${Date.now()}`;
-			const ordinal =
-				sessions
-					.filter((item) => item.projectId === projectId)
-					.reduce((high, item) => Math.max(high, item.ordinal), 0) + 1;
+			const ordinal = nextOrdinal(sessions, projectId);
 			setSessions((previous) => [{ id, ordinal, projectId }, ...previous]);
 			setActiveProjectId(projectId);
 			setActiveSessionId(id);
