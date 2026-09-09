@@ -75,8 +75,8 @@ export type BrowserInfo = {
 
 /** How an agent reaches the app's browser views over CDP, once known. */
 export type BrowserEndpoint = {
-	/** `ws://127.0.0.1:<port>/devtools/browser/<id>`, or null when remote
-	 *  debugging failed to start. */
+	/** The remote debugging port, as digits — what `agent-browser --cdp` wants.
+	 *  Null when remote debugging failed to start. */
 	cdp: string | null;
 	/** Whether `agent-browser` was found on PATH, so the pane can say so. */
 	agentBrowser: boolean;

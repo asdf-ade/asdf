@@ -32,20 +32,26 @@ export class Browsers {
 
 	/**
 	 * Where CDP answers. Chromium chose the port (`remote-debugging-port=0`) and
-	 * wrote it and the browser endpoint's path to `DevToolsActivePort` in the
-	 * profile directory; read once. The WebSocket form is the one to hand out:
-	 * agent-browser attaches to it at once, where the bare port form stalls.
+	 * wrote it to `DevToolsActivePort` in the profile directory; read once.
+	 *
+	 * The port is what to hand out, not the `ws://.../devtools/browser/<id>`
+	 * URL beside it in that file. Both reach the same browser and both work,
+	 * but agent-browser takes minutes over the WebSocket form and about a
+	 * second over the port: measured on Windows against this app, one call was
+	 * 131s and the next 314s over the socket, against 1s either way over the
+	 * port. That is past the timeout `agent` gives a call, so every binding was
+	 * being killed rather than failing — and an unbound session drives whatever
+	 * tab is active, which is this app's own window.
 	 */
 	async describe(): Promise<BrowserEndpoint> {
 		if (this.endpoint) return this.endpoint;
 		let cdp: string | null = null;
 		try {
 			const file = path.join(app.getPath("userData"), "DevToolsActivePort");
-			const [port, route] = readFileSync(file, "utf8")
+			const [port] = readFileSync(file, "utf8")
 				.split(/\r?\n/)
 				.map((line) => line.trim());
-			if (/^\d+$/.test(port) && route?.startsWith("/devtools/browser/"))
-				cdp = `ws://127.0.0.1:${port}${route}`;
+			if (/^\d+$/.test(port)) cdp = port;
 		} catch {
 			// No file: the switch was not honoured. The pane will say so.
 		}
@@ -271,10 +277,15 @@ function agent(args: string[]): Promise<string> {
 			stdout += chunk;
 		});
 		child.on("error", reject);
-		child.on("exit", (code) => {
+		child.on("exit", (code, signal) => {
 			// A tick for the last chunk to land before the pipe is abandoned.
 			setTimeout(() => {
 				if (code === 0) resolve(stdout);
+				// No code and a signal means the timeout above killed it, which
+				// once read as "exited null" and sent us looking for a fault in
+				// agent-browser that was ours.
+				else if (code === null)
+					reject(new Error(`agent-browser timed out after 30s (${signal})`));
 				else reject(new Error(`agent-browser exited ${code}: ${stdout}`));
 			}, 50);
 		});
