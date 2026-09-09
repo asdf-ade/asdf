@@ -104,6 +104,13 @@
 			"open": "{{n}} abertas"
 		},
 		"newSession": "Novo terminal",
+		"newTab": {
+			"title": "Nova aba",
+			"terminal": "Terminal",
+			"terminalHint": "Um shell neste espaço de trabalho",
+			"browser": "Navegador",
+			"browserHint": "Uma página que seu agente pode conduzir"
+		},
 		"sidePanel": "Painel do projeto",
 		"newWorkspace": "Novo espaço de trabalho",
 		"terminalTitle": "Terminal {{n}}",

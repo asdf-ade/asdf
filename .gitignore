@@ -35,3 +35,6 @@ CLAUDE.local.md
 # Electron build output
 out
 release
+
+# node-pty's console helper leaves these behind on Windows
+*.stackdump

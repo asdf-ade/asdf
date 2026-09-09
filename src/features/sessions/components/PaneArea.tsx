@@ -90,10 +90,8 @@ type Props = {
 	onFocusGroup: () => void;
 	onFocus: (id: string) => void;
 	onClose: (id: string) => void;
-	onNewSession: () => void;
-	/** Open a browser as a new tab in this group, like the terminal `+` does.
-	 *  Null when the window has no session yet to own one. */
-	onOpenBrowser: (() => void) | null;
+	/** `+`: asks what the new tab should be. */
+	onNewTab: () => void;
 	/** A tab is being dragged somewhere in the window, so show where it can
 	 *  land. */
 	dragging: boolean;
@@ -128,8 +126,7 @@ export function PaneArea({
 	onFocusGroup,
 	onFocus,
 	onClose,
-	onNewSession,
-	onOpenBrowser,
+	onNewTab,
 	dragging,
 	onDragStart,
 	onDragEnd,
@@ -184,7 +181,7 @@ export function PaneArea({
 			<Button
 				variant="ghost"
 				size="sm"
-				onClick={onNewSession}
+				onClick={onNewTab}
 				className="h-7 gap-1.5 text-muted-foreground text-xs"
 			>
 				<Plus className="size-3.5" />
@@ -225,30 +222,17 @@ export function PaneArea({
 					/>
 				))}
 
+				{/* One control, whatever the tab turns out to be: it asks. */}
 				<Button
 					size="icon"
 					variant="ghost"
-					aria-label={t("session.newSession")}
-					onClick={onNewSession}
+					aria-label={t("session.newTab.title")}
+					title={t("session.newTab.title")}
+					onClick={onNewTab}
 					className="my-1.5 ml-1 size-6 shrink-0"
 				>
 					<Plus className="size-3.5" />
 				</Button>
-				{/* A browser opens as another tab in this group, the way the terminal
-				    `+` beside it does. The person splits it off by dragging, if they
-				    want it beside the terminal rather than behind it. */}
-				{onOpenBrowser && (
-					<Button
-						size="icon"
-						variant="ghost"
-						aria-label={t("browser.open")}
-						title={t("browser.open")}
-						onClick={onOpenBrowser}
-						className="my-1.5 size-6 shrink-0"
-					>
-						<Globe className="size-3.5" />
-					</Button>
-				)}
 				{trailing && <div className="ml-auto flex shrink-0">{trailing}</div>}
 			</div>
 

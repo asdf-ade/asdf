@@ -104,6 +104,13 @@
 			"open": "{{n}} open"
 		},
 		"newSession": "New terminal",
+		"newTab": {
+			"title": "New tab",
+			"terminal": "Terminal",
+			"terminalHint": "A shell in this workspace",
+			"browser": "Browser",
+			"browserHint": "A page your agent can drive"
+		},
 		"sidePanel": "Project panel",
 		"newWorkspace": "New workspace",
 		"terminalTitle": "Terminal {{n}}",

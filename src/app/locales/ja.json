@@ -104,6 +104,13 @@
 			"open": "{{n}} 件を表示中"
 		},
 		"newSession": "新しいターミナル",
+		"newTab": {
+			"title": "新しいタブ",
+			"terminal": "ターミナル",
+			"terminalHint": "このワークスペースのシェル",
+			"browser": "ブラウザ",
+			"browserHint": "エージェントが操作できるページ"
+		},
 		"sidePanel": "プロジェクトパネル",
 		"newWorkspace": "新しいワークスペース",
 		"terminalTitle": "ターミナル {{n}}",

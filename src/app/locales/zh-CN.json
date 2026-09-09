@@ -104,6 +104,13 @@
 			"open": "已打开 {{n}} 个"
 		},
 		"newSession": "新建终端",
+		"newTab": {
+			"title": "新建标签页",
+			"terminal": "终端",
+			"terminalHint": "此工作区中的一个 shell",
+			"browser": "浏览器",
+			"browserHint": "代理可以操作的页面"
+		},
 		"sidePanel": "项目面板",
 		"newWorkspace": "新建工作区",
 		"terminalTitle": "终端 {{n}}",

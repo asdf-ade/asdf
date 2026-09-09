@@ -230,15 +230,13 @@ export function useSessions() {
 		[openIn],
 	);
 
-	// A workspace is a name and opens straight into its first terminal.
-	const createWorkspace = useCallback(
-		(name: string, terminalTitle: string) => {
-			const id = `p${Date.now()}`;
-			setProjects((previous) => [...previous, { id, name }]);
-			createTerminal(id, terminalTitle);
-		},
-		[createTerminal],
-	);
+	// A workspace is a name and nothing else. It opens empty, on the same "+"
+	// every other window shows, so making one does not decide what goes in it.
+	const createWorkspace = useCallback((name: string) => {
+		const id = `p${Date.now()}`;
+		setProjects((previous) => [...previous, { id, name }]);
+		setActiveProjectId(id);
+	}, []);
 
 	// Forgetting a workspace closes its terminals, and their browsers.
 	const removeWorkspace = useCallback(

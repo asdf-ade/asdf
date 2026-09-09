@@ -25,6 +25,7 @@ import { useUpdater } from "@/features/updater/use-updater";
 import { ipc } from "@/ipc/client";
 import { platform } from "@/ipc/platform";
 import { cn } from "@/lib/utils";
+import { NewTabDialog, type TabKind } from "./NewTabDialog";
 import { NewWorkspaceDialog } from "./NewWorkspaceDialog";
 import { SettingsDialog, type Theme } from "./SettingsDialog";
 import { useResizable } from "./use-resizable";
@@ -194,6 +195,9 @@ export function App() {
 	);
 	const [sidebarOpen, setSidebarOpen] = useState(true);
 	const [panelOpen, setPanelOpen] = useState(true);
+	// Which group asked "+", so the answer opens there and not wherever focus
+	// drifted while the dialog was up. Null when nothing is asking.
+	const [newTabIn, setNewTabIn] = useState<string | null>(null);
 	// What each browser tab is called, reported by the pane as its page
 	// changes; the strip has no other way to know a native view's title.
 	const [browserTitles, setBrowserTitles] = useState<Record<number, string>>(
@@ -233,6 +237,10 @@ export function App() {
 	const cwd = useTerminalCwd(active ? (ptys[active.id] ?? null) : null);
 	const repo = useRepo(cwd);
 
+	// Where the caption buttons go. Only the platforms whose OS draws none:
+	// on macOS the traffic lights are the window's own, on the left.
+	const panelHoldsControls = !platform.isMac && panelOpen;
+
 	// Terminals are numbered within their workspace, the way a shell numbers
 	// its own windows, so a name is never asked for.
 	const terminalTitle = (projectId: string) =>
@@ -242,9 +250,23 @@ export function App() {
 					.length + 1,
 		});
 
-	// The folder picker is the whole "new workspace" flow; the folder names
-	// itself and opens into a terminal. With no workspace yet, "+" is that too.
+	// A workspace is only a name; it opens empty and its "+" fills it. With no
+	// workspace yet, "+" makes one first.
 	const newWorkspace = () => setWorkspaceOpen(true);
+
+	// What "+" resolves to once the dialog answers.
+	const openTab = (kind: TabKind) => {
+		const projectId = sessions.activeProjectId;
+		if (!projectId) return;
+		if (newTabIn) sessions.focusGroup(newTabIn);
+		if (kind === "terminal") {
+			sessions.createTerminal(projectId, terminalTitle(projectId));
+			return;
+		}
+		// A browser belongs to a terminal's agent, so it needs one to exist.
+		const session = sessions.activeSession;
+		if (session) void openBrowser(session.id);
+	};
 
 	const versionLabel =
 		updater.state.status === "checking"
@@ -326,24 +348,10 @@ export function App() {
 									onFocusGroup={() => sessions.focusGroup(group.id)}
 									onFocus={sessions.focusPane}
 									onClose={sessions.closePane}
-									onNewSession={() => {
+									onNewTab={() => {
 										if (!sessions.activeProject) return newWorkspace();
-										sessions.focusGroup(group.id);
-										sessions.createTerminal(
-											sessions.activeProjectId,
-											terminalTitle(sessions.activeProjectId),
-										);
+										setNewTabIn(group.id);
 									}}
-									onOpenBrowser={
-										sessions.activeSession
-											? () => {
-													const session = sessions.activeSession;
-													if (!session) return;
-													sessions.focusGroup(group.id);
-													void openBrowser(session.id);
-												}
-											: null
-									}
 									dragging={dragging}
 									onDragStart={() => {
 										setDragging(true);
@@ -410,10 +418,17 @@ export function App() {
 													// Closed, the strip is the window's right edge: keep the
 													// button off it, unless the caption buttons sit there anyway.
 													className={cn(
-														!panelOpen && platform.isMac && "mr-2.5",
+														!panelOpen &&
+															(platform.isMac || panelHoldsControls) &&
+															"mr-2.5",
 													)}
 												/>
-												{!platform.isMac && <WindowControls />}
+												{/* The caption buttons live above the panel when there is
+												    one. With it closed this strip is the window's top
+												    right corner, so they come back here. */}
+												{!platform.isMac && !panelHoldsControls && (
+													<WindowControls />
+												)}
 											</>
 										)
 									}
@@ -425,7 +440,19 @@ export function App() {
 
 				{panelOpen && <ResizeHandle onPointerDown={resizePanel} />}
 				{panelOpen && (
-					<div style={{ width: panelWidth }} className="flex shrink-0">
+					<div
+						style={{ width: panelWidth }}
+						className="flex shrink-0 flex-col bg-muted/30"
+					>
+						{/* Where the OS draws no caption buttons of its own, the window's
+						    top right corner belongs to ours, and the panel starts a row
+						    below them. macOS keeps its traffic lights on the left and the
+						    panel at the top, so this row is not there at all. */}
+						{panelHoldsControls && (
+							<div className="drag-region flex h-9 shrink-0 items-center justify-end border-b">
+								<WindowControls />
+							</div>
+						)}
 						<SidePanel
 							cwd={cwd}
 							repo={repo.snapshot}
@@ -483,9 +510,13 @@ export function App() {
 			<NewWorkspaceDialog
 				open={workspaceOpen}
 				onOpenChange={setWorkspaceOpen}
-				onCreate={(name) =>
-					sessions.createWorkspace(name, t("session.terminalTitle", { n: 1 }))
-				}
+				onCreate={(name) => sessions.createWorkspace(name)}
+			/>
+
+			<NewTabDialog
+				open={newTabIn !== null}
+				onOpenChange={(open) => !open && setNewTabIn(null)}
+				onPick={openTab}
 			/>
 
 			<SettingsDialog
