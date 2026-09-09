@@ -151,8 +151,9 @@ export function PaneArea({
 }: Props) {
 	const { t } = useTranslation();
 	const active = panes.find((pane) => pane.id === activeId) ?? panes[0];
+	// Only a terminal and a file carry one; the rest are not a shell's.
 	const sessionId =
-		active && active.kind !== "issue" && active.kind !== "pull"
+		active?.kind === "session" || active?.kind === "file"
 			? active.sessionId
 			: undefined;
 	const session = sessions.find((item) => item.id === sessionId);

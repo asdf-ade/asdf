@@ -203,6 +203,10 @@ export function App() {
 	const [browserTitles, setBrowserTitles] = useState<Record<number, string>>(
 		{},
 	);
+	// A page that has not said what it is yet is called what it is.
+	const browserTitle = (browserId: number) =>
+		browserTitles[browserId] || t("browser.title");
+
 	// A browser pane is a native view laid over the window, so it draws above
 	// every dialog and takes the pointer that was meant for one. The same is
 	// true of a tab in the air, whose drop zones are DOM underneath. Both are
@@ -220,9 +224,9 @@ export function App() {
 	// The view is made first, so the tab it opens in never points at nothing.
 	// It starts blank; the person or the agent decides where it goes.
 	const openBrowser = useCallback(
-		async (sessionId: string) => {
+		async (projectId: string) => {
 			const opened = await ipc.browserOpen("about:blank");
-			if (opened.ok) sessions.openBrowser(sessionId, opened.value.id);
+			if (opened.ok) sessions.openBrowser(projectId, opened.value.id);
 		},
 		[sessions.openBrowser],
 	);
@@ -277,9 +281,7 @@ export function App() {
 			sessions.createTerminal(projectId, terminalTitle(projectId));
 			return;
 		}
-		// A browser belongs to a terminal's agent, so it needs one to exist.
-		const session = sessions.activeSession;
-		if (session) void openBrowser(session.id);
+		void openBrowser(projectId);
 	};
 
 	const versionLabel =
@@ -312,10 +314,14 @@ export function App() {
 						<SessionSidebar
 							projects={sessions.projects}
 							sessions={sessions.sessions}
+							browsers={sessions.browsers}
+							browserTitle={browserTitle}
 							activeProjectId={sessions.activeProjectId}
 							activeSessionId={active?.id}
+							activePaneId={sessions.activeId}
 							onSelectProject={sessions.selectProject}
 							onOpenSession={sessions.openSession}
+							onOpenBrowser={sessions.openBrowser}
 							onNewWorkspace={newWorkspace}
 							onRemoveWorkspace={sessions.removeWorkspace}
 						/>
@@ -392,9 +398,7 @@ export function App() {
 											}
 										/>
 									)}
-									browserTitle={(browserId) =>
-										browserTitles[browserId] || t("browser.title")
-									}
+									browserTitle={browserTitle}
 									// With the sidebar closed the strip is the window's left edge,
 									// and on macOS the traffic lights sit there.
 									leading={
