@@ -18,6 +18,8 @@ type Props = {
 	sessions: Session[];
 	/** The browser tabs of each workspace, listed beside its terminals. */
 	browsers: Record<string, { id: string; browserId: number }[]>;
+	/** What a session is called, numbered within its workspace. */
+	sessionTitle: (session: Session) => string;
 	/** What a browser is called: its page title, once it has one. */
 	browserTitle: (browserId: number) => string;
 	/** The workspace whose window is on screen. Switching swaps the tab set. */
@@ -41,6 +43,7 @@ export function SessionSidebar({
 	projects,
 	sessions,
 	browsers,
+	sessionTitle,
 	browserTitle,
 	activeProjectId,
 	activeSessionId,
@@ -151,7 +154,7 @@ export function SessionSidebar({
 										<li key={session.id}>
 											<Row
 												icon={TerminalSquare}
-												label={session.title}
+												label={sessionTitle(session)}
 												current={active && session.id === activeSessionId}
 												onOpen={() => onOpenSession(session.id)}
 											/>

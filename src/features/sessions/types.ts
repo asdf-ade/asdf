@@ -11,11 +11,20 @@ export type {
 /** Where a changed file stands with the person reading it. */
 export type ReviewState = "new" | "reviewed" | "reverted";
 
-/** A terminal. Where it is comes from the shell itself, asked live. */
+/**
+ * One window's worth of work: one agent, one terminal, the files it opened.
+ * Where it is comes from the shell itself, asked live.
+ */
 export type Session = {
 	id: string;
-	title: string;
-	/** The workspace this terminal belongs to. */
+	/**
+	 * What it is called, as a number within its workspace — "terminal 3". Kept
+	 * as the number rather than the finished string so the name is written in
+	 * whatever language is on now, not the one that was on when it was made,
+	 * and so closing one does not free its number for the next.
+	 */
+	ordinal: number;
+	/** The workspace this session belongs to. */
 	projectId: string;
 };
 

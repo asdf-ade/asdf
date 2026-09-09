@@ -297,19 +297,29 @@ export function useSessions() {
 	);
 
 	/**
-	 * Makes a session and the terminal it is. The title is the caller's, since
-	 * only it knows the language and how many came before.
+	 * Makes a session and the terminal it is.
+	 *
+	 * Its number is one past the highest the workspace has used, not one past
+	 * how many it holds: counting would hand a closed session's number to the
+	 * next one and put two of the same name in the sidebar.
 	 */
-	const createSession = useCallback((projectId: string, title: string) => {
-		const id = `s${Date.now()}`;
-		setSessions((previous) => [{ id, title, projectId }, ...previous]);
-		setActiveProjectId(projectId);
-		setActiveSessionId(id);
-		setWindows((previous) => ({
-			...previous,
-			[id]: windowOf({ kind: "session", id: `session:${id}`, sessionId: id }),
-		}));
-	}, []);
+	const createSession = useCallback(
+		(projectId: string) => {
+			const id = `s${Date.now()}`;
+			const ordinal =
+				sessions
+					.filter((item) => item.projectId === projectId)
+					.reduce((high, item) => Math.max(high, item.ordinal), 0) + 1;
+			setSessions((previous) => [{ id, ordinal, projectId }, ...previous]);
+			setActiveProjectId(projectId);
+			setActiveSessionId(id);
+			setWindows((previous) => ({
+				...previous,
+				[id]: windowOf({ kind: "session", id: `session:${id}`, sessionId: id }),
+			}));
+		},
+		[sessions],
+	);
 
 	// A workspace is a name and the folder its sessions open in. It opens
 	// empty, on the same "+" every session shows, so making one does not
