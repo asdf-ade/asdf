@@ -80,6 +80,23 @@ export function NewWorkspaceDialog({ open, onOpenChange, onCreate }: Props) {
 		};
 	}, [cloning]);
 
+	/**
+	 * Opens the OS picker and answers with the folder, or null.
+	 *
+	 * A dismissed picker and a picker that could not run look the same from
+	 * here — both give no folder — so they are told apart before returning:
+	 * one is an answer, the other is worth saying out loud, or the row looks
+	 * like a button that does nothing.
+	 */
+	const askForFolder = async (): Promise<string | null> => {
+		const picked = await ipc.pickFolder();
+		if (!picked.ok) {
+			setFailure(picked.error.message);
+			return null;
+		}
+		return picked.value;
+	};
+
 	// The folder names the workspace, unless the person has said otherwise.
 	const pick = async (chosen: Source) => {
 		setFailure(null);
@@ -87,17 +104,17 @@ export function NewWorkspaceDialog({ open, onOpenChange, onCreate }: Props) {
 			setSource(chosen);
 			return;
 		}
-		const picked = await ipc.pickFolder();
-		if (!picked.ok || !picked.value) return;
-		const folder = picked.value;
+		const folder = await askForFolder();
+		if (!folder) return;
 		setPath(folder);
 		setName((previous) => previous || basename(folder));
 		setSource("folder");
 	};
 
 	const chooseParent = async () => {
-		const picked = await ipc.pickFolder();
-		if (picked.ok && picked.value) setPath(picked.value);
+		setFailure(null);
+		const folder = await askForFolder();
+		if (folder) setPath(folder);
 	};
 
 	const done = (folder: string | null) => {
@@ -221,9 +238,13 @@ export function NewWorkspaceDialog({ open, onOpenChange, onCreate }: Props) {
 								{progress || t("session.workspace.cloning")}
 							</p>
 						)}
-						{failure && <p className="text-destructive text-xs">{failure}</p>}
 					</div>
 				)}
+
+				{/* Outside both, because the picker can fail on the first screen too
+				    — where there is nothing else to show for a row that was pressed
+				    and did nothing. */}
+				{failure && <p className="text-destructive text-xs">{failure}</p>}
 
 				<DialogFooter>
 					<Button
