@@ -21,10 +21,11 @@ export function TerminalPane({
 	}, [ptyId, onSession]);
 
 	return (
-		<div className="relative min-h-0 overflow-hidden bg-black">
+		<div className="relative min-h-0 overflow-hidden bg-background">
 			{/* The emulator owns this element's children; never render into it. The
 			    padding is on this element on purpose: the fit addon subtracts it
-			    when sizing the grid, and the black behind it is the emulator's own. */}
+			    when sizing the grid, and what shows through it is the same colour
+			    the emulator paints — see ../theme.ts. */}
 			<div ref={host} className="absolute inset-0 px-3 py-2" />
 
 			{match(session)

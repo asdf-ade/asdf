@@ -8,6 +8,7 @@ import {
 } from "@/ipc/bindings";
 import { ipc } from "@/ipc/client";
 import { platform } from "@/ipc/platform";
+import { isDark, terminalTheme, watchTheme } from "./theme";
 
 export type SessionStatus =
 	| { status: "starting" }
@@ -47,12 +48,21 @@ export function useTerminalSession(
 				"ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
 			fontSize: 13,
 			allowProposedApi: true,
+			theme: terminalTheme(isDark()),
 		});
 		const fit = new FitAddon();
 		term.loadAddon(fit);
 		term.open(element);
 		fit.fit();
 		terminal.current = term;
+
+		// The shell keeps running across a theme change, so the palette is
+		// swapped under it rather than the emulator rebuilt.
+		cleanups.push(
+			watchTheme((dark) => {
+				term.options.theme = terminalTheme(dark);
+			}),
+		);
 
 		void (async () => {
 			const opened = await ipc.openTerminal(cwd, term.cols, term.rows);
