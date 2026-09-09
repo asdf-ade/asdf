@@ -9,7 +9,13 @@ import {
 	Undo2,
 	X,
 } from "lucide-react";
-import { type DragEvent, type ReactNode, useEffect, useState } from "react";
+import {
+	type DragEvent,
+	Fragment,
+	type ReactNode,
+	useEffect,
+	useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { ipc } from "@/ipc/client";
@@ -64,6 +70,12 @@ function sideAt(x: number, y: number, width: number, height: number): Side {
 	const dy = y / height - 0.5;
 	if (Math.abs(dx) >= Math.abs(dy)) return dx < 0 ? "left" : "right";
 	return dy < 0 ? "top" : "bottom";
+}
+
+/** Whether the pointer is in the left half of the element it is over. */
+function nearHalf(event: DragEvent): boolean {
+	const rect = event.currentTarget.getBoundingClientRect();
+	return event.clientX < rect.left + rect.width / 2;
 }
 
 const halfOf: Record<Side, string> = {
@@ -145,6 +157,17 @@ export function PaneArea({
 			: undefined;
 	const session = sessions.find((item) => item.id === sessionId);
 	const [over, setOver] = useState<Side | null>(null);
+	// Where in this strip a dropped tab would land, while one is in the air.
+	const [at, setAt] = useState<number | null>(null);
+
+	// A drag that ended anywhere leaves no highlight behind, including one that
+	// ended over a different group than the one showing it.
+	useEffect(() => {
+		if (!dragging) {
+			setOver(null);
+			setAt(null);
+		}
+	}, [dragging]);
 
 	const accept = (event: DragEvent) => {
 		if (!dragging) return;
@@ -154,6 +177,7 @@ export function PaneArea({
 	const dropped = (event: DragEvent, target: DropTarget) => {
 		event.preventDefault();
 		setOver(null);
+		setAt(null);
 		const id = event.dataTransfer.getData(PANE_MIME);
 		if (id) onDrop(id, target);
 	};
@@ -203,24 +227,43 @@ export function PaneArea({
 			    moves it into this group. */}
 			<div
 				role="tablist"
-				onDragOver={accept}
-				onDrop={(event) => dropped(event, { group: groupId })}
+				onDragOver={(event) => {
+					accept(event);
+					// Only the space past the last tab reaches here: a tab stops the
+					// event to say where in the order the pointer is.
+					if (dragging) setAt(panes.length);
+				}}
+				onDragLeave={() => setAt(null)}
+				onDrop={(event) =>
+					dropped(event, { group: groupId, index: at ?? undefined })
+				}
 				className="drag-region flex h-9 shrink-0 items-stretch overflow-hidden border-b bg-muted/40"
 			>
 				{leading}
-				{panes.map((pane) => (
-					<Tab
-						key={pane.id}
-						pane={pane}
-						label={tabLabel(pane, sessions, browserTitle)}
-						active={pane.id === active?.id}
-						focused={focused}
-						onFocus={() => onFocus(pane.id)}
-						onClose={() => onClose(pane.id)}
-						onDragStart={onDragStart}
-						onDragEnd={onDragEnd}
-					/>
+				{panes.map((pane, index) => (
+					<Fragment key={pane.id}>
+						{at === index && <Caret />}
+						<Tab
+							pane={pane}
+							label={tabLabel(pane, sessions, browserTitle)}
+							active={pane.id === active?.id}
+							focused={focused}
+							onFocus={() => onFocus(pane.id)}
+							onClose={() => onClose(pane.id)}
+							dragging={dragging}
+							onDragStart={onDragStart}
+							onDragEnd={onDragEnd}
+							onOver={(before) => setAt(before ? index : index + 1)}
+							onDropAt={(event, before) =>
+								dropped(event, {
+									group: groupId,
+									index: before ? index : index + 1,
+								})
+							}
+						/>
+					</Fragment>
 				))}
+				{at === panes.length && <Caret />}
 
 				{/* One control, whatever the tab turns out to be: it asks. */}
 				<Button
@@ -310,6 +353,11 @@ export function PaneArea({
 	);
 }
 
+/** Where a dropped tab would go, drawn in the gap it would take. */
+function Caret() {
+	return <span className="my-1 w-0.5 shrink-0 rounded-full bg-ring" />;
+}
+
 function Tab({
 	pane,
 	label,
@@ -317,8 +365,11 @@ function Tab({
 	focused,
 	onFocus,
 	onClose,
+	dragging,
 	onDragStart,
 	onDragEnd,
+	onOver,
+	onDropAt,
 }: {
 	pane: Pane;
 	label: string;
@@ -326,8 +377,12 @@ function Tab({
 	focused: boolean;
 	onFocus: () => void;
 	onClose: () => void;
+	dragging: boolean;
 	onDragStart: () => void;
 	onDragEnd: () => void;
+	/** True for the near half of the tab, which means "land before this one". */
+	onOver: (before: boolean) => void;
+	onDropAt: (event: DragEvent, before: boolean) => void;
 }) {
 	const { t } = useTranslation();
 	const Icon = tabIcon[pane.kind];
@@ -347,6 +402,20 @@ function Tab({
 				onDragStart();
 			}}
 			onDragEnd={onDragEnd}
+			// The half of the tab the pointer is in decides which side of it the
+			// dragged one lands on. Kept from the strip, whose own handler speaks
+			// for the empty space past the last tab and would say "the end".
+			onDragOver={(event) => {
+				if (!dragging) return;
+				event.preventDefault();
+				event.stopPropagation();
+				event.dataTransfer.dropEffect = "move";
+				onOver(nearHalf(event));
+			}}
+			onDrop={(event) => {
+				event.stopPropagation();
+				onDropAt(event, nearHalf(event));
+			}}
 			className={cn(
 				"@container relative flex min-w-8 max-w-52 flex-1 basis-0 items-center gap-1 border-r pr-2 pl-2.5",
 				active

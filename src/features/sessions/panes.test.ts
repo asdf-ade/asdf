@@ -166,3 +166,63 @@ describe("closePane", () => {
 		expect(after.layout.kind).toBe("leaf");
 	});
 });
+
+describe("movePane within a strip", () => {
+	const threeTabs = () => openPane(twoTabs(), tab(3));
+	const order = (window: ReturnType<typeof threeTabs>) =>
+		window.groups[0].panes.map((pane) => pane.id);
+
+	it("moves a tab left to the place the caret was in", () => {
+		const before = threeTabs();
+		const after = movePane(before, "session:s3", {
+			group: before.groups[0].id,
+			index: 1,
+		});
+		expect(order(after)).toEqual(["session:s1", "session:s3", "session:s2"]);
+	});
+
+	it("moves a tab right, counting the place from the strip it was dragged off", () => {
+		const before = threeTabs();
+		// Between s2 and s3 while s1 is still in the strip, so s1 ends up second.
+		const after = movePane(before, "session:s1", {
+			group: before.groups[0].id,
+			index: 2,
+		});
+		expect(order(after)).toEqual(["session:s2", "session:s1", "session:s3"]);
+	});
+
+	it("sends a tab to the end when no place is named", () => {
+		const before = threeTabs();
+		const after = movePane(before, "session:s1", {
+			group: before.groups[0].id,
+		});
+		expect(order(after)).toEqual(["session:s2", "session:s3", "session:s1"]);
+	});
+
+	it("leaves the window alone when the tab lands where it already was", () => {
+		const before = threeTabs();
+		for (const index of [1, 2]) {
+			expect(
+				movePane(before, "session:s2", { group: before.groups[0].id, index }),
+			).toBe(before);
+		}
+	});
+
+	it("drops a tab into another group at the place asked for", () => {
+		const split = movePane(threeTabs(), "session:s3", {
+			split: openPane(twoTabs(), tab(3)).groups[0].id,
+			side: "right",
+		});
+		const [left, right] = split.groups;
+		const after = movePane(split, "session:s1", {
+			group: right.id,
+			index: 0,
+		});
+		expect(
+			after.groups.find((g) => g.id === right.id)?.panes.map((p) => p.id),
+		).toEqual(["session:s1", "session:s3"]);
+		expect(
+			after.groups.find((g) => g.id === left.id)?.panes.map((p) => p.id),
+		).toEqual(["session:s2"]);
+	});
+});

@@ -27,9 +27,17 @@ export type PaneWindow = {
 	active: string;
 };
 
-/** Where a dragged tab lands: on another group's strip, or past the middle of
- *  a group's body, which opens a new group on that side of it. */
-export type DropTarget = { group: string } | { split: string; side: Side };
+/**
+ * Where a dragged tab lands: at a place in a group's strip, or past the middle
+ * of a group's body, which opens a new group on that side of it.
+ *
+ * `index` counts the strip as it looks while the tab is in the air, so 0 is
+ * before the first tab and the length is after the last. Left out, the tab goes
+ * on the end.
+ */
+export type DropTarget =
+	| { group: string; index?: number }
+	| { split: string; side: Side };
 
 let groupCount = 0;
 const groupId = () => `pg${++groupCount}`;
@@ -184,8 +192,9 @@ export function closePane(window: PaneWindow, paneId: string): PaneWindow {
 	return compact(groups, window.layout, window.active);
 }
 
-/** A dragged tab moves into another group, or past the middle of a body to
- *  open a new group on that side of it. A group left with no tabs closes. */
+/** A dragged tab moves to a place in a strip — its own or another group's — or
+ *  past the middle of a body to open a new group on that side of it. A group
+ *  left with no tabs closes. */
 export function movePane(
 	window: PaneWindow,
 	paneId: string,
@@ -194,7 +203,6 @@ export function movePane(
 	const source = holderOf(window, paneId);
 	const pane = source?.panes.find((item) => item.id === paneId);
 	if (!source || !pane) return window;
-	if ("group" in drop && drop.group === source.id) return window;
 	// Splitting a lone tab off its own group would only rename the group.
 	if ("split" in drop && drop.split === source.id && source.panes.length === 1)
 		return window;
@@ -210,10 +218,25 @@ export function movePane(
 	});
 
 	if ("group" in drop) {
+		const asked = drop.index ?? Number.MAX_SAFE_INTEGER;
+		// The index was read off the strip with the tab still in it. Taking the
+		// tab out shifts everything after it one place left, so a place past the
+		// tab's own has to come back one to stay where the pointer was.
+		const from = source.panes.findIndex((item) => item.id === paneId);
+		const at = drop.group === source.id && from < asked ? asked - 1 : asked;
+		if (drop.group === source.id && at === from) return window;
 		return compact(
 			groups.map((group) =>
 				group.id === drop.group
-					? { ...group, panes: [...group.panes, pane], activeId: paneId }
+					? {
+							...group,
+							panes: [
+								...group.panes.slice(0, at),
+								pane,
+								...group.panes.slice(at),
+							],
+							activeId: paneId,
+						}
 					: group,
 			),
 			window.layout,

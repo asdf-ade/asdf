@@ -203,6 +203,20 @@ export function App() {
 	const [browserTitles, setBrowserTitles] = useState<Record<number, string>>(
 		{},
 	);
+	// A browser pane is a native view laid over the window, so it draws above
+	// every dialog and takes the pointer that was meant for one. The same is
+	// true of a tab in the air, whose drop zones are DOM underneath. Both are
+	// answered by putting the views away until the thing on top is done with.
+	const overlay =
+		dragging ||
+		workspaceOpen ||
+		settingsOpen ||
+		updater.open ||
+		newTabIn !== null;
+	useEffect(() => {
+		void ipc.browserCover(overlay);
+	}, [overlay]);
+
 	// The view is made first, so the tab it opens in never points at nothing.
 	// It starts blank; the person or the agent decides where it goes.
 	const openBrowser = useCallback(
@@ -353,18 +367,10 @@ export function App() {
 										setNewTabIn(group.id);
 									}}
 									dragging={dragging}
-									onDragStart={() => {
-										setDragging(true);
-										// Native views sit above the DOM and would swallow the drop.
-										void ipc.browserCover(true);
-									}}
-									onDragEnd={() => {
-										setDragging(false);
-										void ipc.browserCover(false);
-									}}
+									onDragStart={() => setDragging(true)}
+									onDragEnd={() => setDragging(false)}
 									onDrop={(paneId, target) => {
 										setDragging(false);
-										void ipc.browserCover(false);
 										sessions.movePane(paneId, target);
 									}}
 									renderAgent={(session) => (
