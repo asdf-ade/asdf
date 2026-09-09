@@ -116,6 +116,13 @@ export class Browsers {
 	 * The view is found among the targets by a title stamped on it, then the
 	 * session is switched to it, which the session remembers.
 	 *
+	 * The name carries the debugging port, so it is new every time the app
+	 * starts. An agent-browser session remembers the endpoint it was made
+	 * with and outlives the app by up to an hour of idle time, so a name that
+	 * repeated across runs — `asdf-browser-0` every launch — would be answered
+	 * by a daemon still holding the previous run's port, and every call would
+	 * time out against a browser that is gone.
+	 *
 	 * ponytail: a `--pin-tab` flag would make the binding strict, so a closed
 	 * tab fails loudly instead of falling through to a neighbour. It landed
 	 * after 0.27, the version this was written against, and asking for it there
@@ -124,7 +131,7 @@ export class Browsers {
 	private async bind(id: number, view: WebContentsView): Promise<void> {
 		const { cdp, agentBrowser } = await this.describe();
 		if (!cdp || !agentBrowser) return;
-		const marker = `asdf-browser-${id}`;
+		const marker = `asdf-browser-${cdp}-${id}`;
 		const session = marker;
 		try {
 			await view.webContents.executeJavaScript(

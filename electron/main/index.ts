@@ -83,6 +83,12 @@ function createWindow(): BrowserWindow {
 		return { action: "deny" };
 	});
 
+	// The panes live in the renderer and the views they show live here, so a
+	// renderer that reloads leaves every view it opened with no owner: nothing
+	// left to place it, hide it or close it, and it stays over the window at
+	// whatever bounds it last had. The reload is the end of those panes.
+	window.webContents.on("did-start-loading", () => browsers.closeAll());
+
 	window.on("close", (event) => {
 		if (closing) return;
 		event.preventDefault();
