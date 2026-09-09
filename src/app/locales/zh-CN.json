@@ -120,7 +120,24 @@
 			"name": "工作区名称",
 			"namePlaceholder": "web",
 			"cancel": "取消",
-			"create": "创建"
+			"back": "返回",
+			"create": "创建",
+			"clone": "克隆",
+			"folder": "文件夹",
+			"parent": "克隆到",
+			"noFolder": "未选择文件夹",
+			"choose": "选择…",
+			"url": "仓库地址",
+			"urlPlaceholder": "https://github.com/owner/repo.git",
+			"cloning": "正在克隆…",
+			"source": {
+				"empty": "空工作区",
+				"emptyHint": "仅有名称。终端在 shell 的默认目录中打开。",
+				"folder": "打开文件夹",
+				"folderHint": "选择已有文件夹，或在选择器中新建一个",
+				"clone": "克隆仓库",
+				"cloneHint": "下载到新的文件夹"
+			}
 		}
 	},
 	"settings": {

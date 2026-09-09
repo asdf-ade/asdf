@@ -27,7 +27,15 @@ const STORAGE_KEY = "workspaces";
 
 function loadProjects(): Project[] {
 	try {
-		return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]") as Project[];
+		const stored = JSON.parse(
+			localStorage.getItem(STORAGE_KEY) ?? "[]",
+		) as Project[];
+		// Workspaces written before a workspace could hold a folder have no
+		// `path` at all; they are the name-only kind, which is still a kind.
+		return stored.map((project) => ({
+			...project,
+			path: project.path ?? null,
+		}));
 	} catch {
 		return [];
 	}
@@ -230,13 +238,17 @@ export function useSessions() {
 		[openIn],
 	);
 
-	// A workspace is a name and nothing else. It opens empty, on the same "+"
-	// every other window shows, so making one does not decide what goes in it.
-	const createWorkspace = useCallback((name: string) => {
-		const id = `p${Date.now()}`;
-		setProjects((previous) => [...previous, { id, name }]);
-		setActiveProjectId(id);
-	}, []);
+	// A workspace is a name and the folder its terminals open in. It opens
+	// empty, on the same "+" every other window shows, so making one does not
+	// decide what goes in it.
+	const createWorkspace = useCallback(
+		(name: string, path: string | null = null) => {
+			const id = `p${Date.now()}`;
+			setProjects((previous) => [...previous, { id, name, path }]);
+			setActiveProjectId(id);
+		},
+		[],
+	);
 
 	// Forgetting a workspace closes its terminals, and their browsers.
 	const removeWorkspace = useCallback(

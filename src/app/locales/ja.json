@@ -120,7 +120,24 @@
 			"name": "ワークスペース名",
 			"namePlaceholder": "web",
 			"cancel": "キャンセル",
-			"create": "完了"
+			"back": "戻る",
+			"create": "完了",
+			"clone": "クローン",
+			"folder": "フォルダ",
+			"parent": "クローン先",
+			"noFolder": "フォルダが未選択",
+			"choose": "選択…",
+			"url": "リポジトリ URL",
+			"urlPlaceholder": "https://github.com/owner/repo.git",
+			"cloning": "クローン中…",
+			"source": {
+				"empty": "空のワークスペース",
+				"emptyHint": "名前だけ。ターミナルはシェルの既定の場所で開きます。",
+				"folder": "フォルダを開く",
+				"folderHint": "既存のフォルダを選ぶか、選択画面で新規作成します",
+				"clone": "リポジトリをクローン",
+				"cloneHint": "新しいフォルダに取得します"
+			}
 		}
 	},
 	"settings": {

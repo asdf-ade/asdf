@@ -120,7 +120,24 @@
 			"name": "Nome do espaço de trabalho",
 			"namePlaceholder": "web",
 			"cancel": "Cancelar",
-			"create": "Criar"
+			"back": "Voltar",
+			"create": "Criar",
+			"clone": "Clonar",
+			"folder": "Pasta",
+			"parent": "Clonar em",
+			"noFolder": "Nenhuma pasta escolhida",
+			"choose": "Escolher…",
+			"url": "URL do repositório",
+			"urlPlaceholder": "https://github.com/owner/repo.git",
+			"cloning": "Clonando…",
+			"source": {
+				"empty": "Espaço vazio",
+				"emptyHint": "Só um nome. Os terminais abrem onde o seu shell abrir.",
+				"folder": "Abrir uma pasta",
+				"folderHint": "Escolha uma, ou crie uma nova no seletor",
+				"clone": "Clonar um repositório",
+				"cloneHint": "Baixe para uma pasta nova"
+			}
 		}
 	},
 	"settings": {

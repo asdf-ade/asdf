@@ -48,6 +48,13 @@ export const TERMINAL_EXIT_EVENT = "terminal://exit";
 export const UPDATER_PROGRESS_EVENT = "updater://progress";
 
 /**
+ * Emitted for each line git prints while cloning. Git reports progress on
+ * stderr and rewrites one line in place, so this is what it last said rather
+ * than a running total: there is no total to have until it has counted.
+ */
+export const CLONE_PROGRESS_EVENT = "workspace://clone-progress";
+
+/**
  * Emitted when the window is about to close. The renderer runs whatever it has
  * to do on the way out and then acknowledges, which is what actually closes it.
  */

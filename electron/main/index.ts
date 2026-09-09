@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import {
 	app,
 	BrowserWindow,
+	dialog,
 	ipcMain,
 	Menu,
 	nativeTheme,
@@ -10,11 +11,13 @@ import {
 } from "electron";
 import {
 	BROWSER_STATE_EVENT,
+	CLONE_PROGRESS_EVENT,
 	TERMINAL_EXIT_EVENT,
 	TERMINAL_OUTPUT_EVENT,
 	WINDOW_CLOSE_REQUESTED_EVENT,
 } from "@/ipc/bindings";
 import { Browsers } from "./browser";
+import { clone } from "./git";
 import * as repo from "./repo";
 import { ok } from "./result";
 import { Registry } from "./terminal";
@@ -213,6 +216,26 @@ ipcMain.handle(
 
 ipcMain.handle("close_terminal", (_event, { id }: { id: number }) =>
 	terminals.close(id),
+);
+
+// The folder a workspace opens in. The OS dialog is the whole picker: it
+// browses, and its own "New folder" button is how a workspace gets a fresh
+// one, so there is nothing to build here for that.
+ipcMain.handle("pick_folder", async () => {
+	const window = main;
+	if (!window) return ok(null);
+	const picked = await dialog.showOpenDialog(window, {
+		properties: ["openDirectory", "createDirectory"],
+	});
+	return ok(picked.canceled ? null : (picked.filePaths[0] ?? null));
+});
+
+ipcMain.handle(
+	"clone_repo",
+	(_event, { url, parent }: { url: string; parent: string }) =>
+		clone(url, parent, (line) =>
+			main?.webContents.send(CLONE_PROGRESS_EVENT, line),
+		),
 );
 
 ipcMain.handle("updater://check", () => updater.check());

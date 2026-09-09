@@ -120,7 +120,24 @@
 			"name": "Workspace name",
 			"namePlaceholder": "web",
 			"cancel": "Cancel",
-			"create": "Create"
+			"back": "Back",
+			"create": "Create",
+			"clone": "Clone",
+			"folder": "Folder",
+			"parent": "Clone into",
+			"noFolder": "No folder chosen",
+			"choose": "Choose…",
+			"url": "Repository URL",
+			"urlPlaceholder": "https://github.com/owner/repo.git",
+			"cloning": "Cloning…",
+			"source": {
+				"empty": "Empty workspace",
+				"emptyHint": "A name only. Terminals open wherever your shell does.",
+				"folder": "Open a folder",
+				"folderHint": "Pick one, or make a new one in the picker",
+				"clone": "Clone a repository",
+				"cloneHint": "Fetch it into a new folder"
+			}
 		}
 	},
 	"settings": {

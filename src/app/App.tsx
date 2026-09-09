@@ -268,8 +268,13 @@ export function App() {
 					.length + 1,
 		});
 
-	// A workspace is only a name; it opens empty and its "+" fills it. With no
-	// workspace yet, "+" makes one first.
+	// Where a workspace's terminals start. Null for one that is only a name,
+	// which leaves the shell to open wherever it would have.
+	const folderOf = (projectId: string) =>
+		sessions.projects.find((project) => project.id === projectId)?.path ?? null;
+
+	// A workspace opens empty and its "+" fills it. With no workspace yet, "+"
+	// makes one first.
 	const newWorkspace = () => setWorkspaceOpen(true);
 
 	// What "+" resolves to once the dialog answers.
@@ -381,7 +386,7 @@ export function App() {
 									}}
 									renderAgent={(session) => (
 										<TerminalPane
-											cwd={null}
+											cwd={folderOf(session.projectId)}
 											onSession={(id) => bindPty(session.id, id)}
 										/>
 									)}
@@ -520,7 +525,7 @@ export function App() {
 			<NewWorkspaceDialog
 				open={workspaceOpen}
 				onOpenChange={setWorkspaceOpen}
-				onCreate={(name) => sessions.createWorkspace(name)}
+				onCreate={(name, path) => sessions.createWorkspace(name, path)}
 			/>
 
 			<NewTabDialog

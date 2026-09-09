@@ -118,6 +118,10 @@ export function SessionSidebar({
 									type="button"
 									aria-current={active ? "true" : undefined}
 									onClick={() => onSelectProject(project.id)}
+									// The folder is what tells two workspaces of the same name
+									// apart, and it is too long for the row, so it is the
+									// tooltip rather than a second line.
+									title={project.path ?? undefined}
 									className="flex min-w-0 flex-1 items-center gap-1.5 py-1 pr-1 text-left"
 								>
 									<span className="min-w-0 flex-1 truncate font-medium text-xs">

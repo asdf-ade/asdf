@@ -40,6 +40,11 @@ export async function call<T>(
 export const ipc = {
 	openWorkspace: (path: string) =>
 		call<WorkspaceInfo>("open_workspace", { path }),
+	/** The OS folder picker. Null when it was dismissed. */
+	pickFolder: () => call<string | null>("pick_folder"),
+	/** Clones into a new folder under `parent`, and answers with where. */
+	cloneRepo: (url: string, parent: string) =>
+		call<{ path: string }>("clone_repo", { url, parent }),
 	openTerminal: (cwd: string | null, cols: number, rows: number) =>
 		call<number>("open_terminal", { cwd, cols, rows }),
 	writeTerminal: (id: number, data: string) =>
