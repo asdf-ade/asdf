@@ -251,8 +251,18 @@ export function App() {
 		return () => media?.removeEventListener("change", apply);
 	}, [theme]);
 
+	// Where a workspace's terminals start. Null for one that is only a name,
+	// which leaves the shell to open wherever it would have.
+	const folderOf = (projectId: string) =>
+		sessions.projects.find((project) => project.id === projectId)?.path ?? null;
+
 	const active = sessions.activeSession;
-	const cwd = useTerminalCwd(active ? (ptys[active.id] ?? null) : null);
+	const shellCwd = useTerminalCwd(active ? (ptys[active.id] ?? null) : null);
+	// The shell's own answer wins, so the panel follows a `cd`. Where there is
+	// no answer it falls back to the folder the workspace opens in — which on
+	// Windows is every terminal, since a process there does not hand out its
+	// working directory the way /proc and lsof do.
+	const cwd = shellCwd ?? (active ? folderOf(active.projectId) : null);
 	const repo = useRepo(cwd);
 
 	// Where the caption buttons go. Only the platforms whose OS draws none:
@@ -267,11 +277,6 @@ export function App() {
 				sessions.sessions.filter((session) => session.projectId === projectId)
 					.length + 1,
 		});
-
-	// Where a workspace's terminals start. Null for one that is only a name,
-	// which leaves the shell to open wherever it would have.
-	const folderOf = (projectId: string) =>
-		sessions.projects.find((project) => project.id === projectId)?.path ?? null;
 
 	// A workspace opens empty and its "+" fills it. With no workspace yet, "+"
 	// makes one first.
