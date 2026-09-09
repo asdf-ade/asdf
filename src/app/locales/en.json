@@ -131,8 +131,8 @@
 			"urlPlaceholder": "https://github.com/owner/repo.git",
 			"cloning": "Cloning…",
 			"source": {
-				"empty": "Empty workspace",
-				"emptyHint": "A name only. Terminals open wherever your shell does.",
+				"none": "Start anywhere",
+				"noneHint": "No folder to begin with. Terminals open where your shell does, and go wherever the work is.",
 				"folder": "Open a folder",
 				"folderHint": "Pick one, or make a new one in the picker",
 				"clone": "Clone a repository",

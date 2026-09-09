@@ -131,8 +131,8 @@
 			"urlPlaceholder": "https://github.com/owner/repo.git",
 			"cloning": "Clonando…",
 			"source": {
-				"empty": "Espaço vazio",
-				"emptyHint": "Só um nome. Os terminais abrem onde o seu shell abrir.",
+				"none": "Começar livremente",
+				"noneHint": "Sem pasta inicial. Os terminais abrem onde o seu shell abrir e vão para onde o trabalho estiver.",
 				"folder": "Abrir uma pasta",
 				"folderHint": "Escolha uma, ou crie uma nova no seletor",
 				"clone": "Clonar um repositório",

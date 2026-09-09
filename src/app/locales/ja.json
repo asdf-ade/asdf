@@ -131,8 +131,8 @@
 			"urlPlaceholder": "https://github.com/owner/repo.git",
 			"cloning": "クローン中…",
 			"source": {
-				"empty": "空のワークスペース",
-				"emptyHint": "名前だけ。ターミナルはシェルの既定の場所で開きます。",
+				"none": "自由に始める",
+				"noneHint": "フォルダを決めません。ターミナルはシェルの既定の場所で開き、そこから作業したい場所へ移動できます。",
 				"folder": "フォルダを開く",
 				"folderHint": "既存のフォルダを選ぶか、選択画面で新規作成します",
 				"clone": "リポジトリをクローン",
