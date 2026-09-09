@@ -9,7 +9,7 @@ asdf is in early development and has no releases yet. Only `main` is supported.
 Please do not open a public issue.
 
 Report privately through GitHub Security Advisories:
-[**Report a vulnerability**](https://github.com/teamBuzzle/asdf/security/advisories/new).
+[**Report a vulnerability**](https://github.com/asdf-ade/asdf/security/advisories/new).
 That creates a private thread with the maintainers.
 
 Useful to include: what an attacker can do, the steps to reproduce it, the

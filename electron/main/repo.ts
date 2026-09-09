@@ -71,6 +71,11 @@ export async function cwdOf(pid: number): Promise<string | null> {
 	} catch {
 		// Fall through: the process may have gone, or lsof may be missing.
 	}
+	// Windows has no cheap way to ask: the working directory lives in the
+	// process's own PEB, and reading another process's PEB means native code.
+	// The workspace's folder is what the panel falls back to there, so this
+	// answering null is a smaller loss than it looks — it costs following a
+	// `cd`, not knowing where the terminal is.
 	return null;
 }
 

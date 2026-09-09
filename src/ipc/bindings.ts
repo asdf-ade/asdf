@@ -48,10 +48,42 @@ export const TERMINAL_EXIT_EVENT = "terminal://exit";
 export const UPDATER_PROGRESS_EVENT = "updater://progress";
 
 /**
+ * Emitted for each line git prints while cloning. Git reports progress on
+ * stderr and rewrites one line in place, so this is what it last said rather
+ * than a running total: there is no total to have until it has counted.
+ */
+export const CLONE_PROGRESS_EVENT = "workspace://clone-progress";
+
+/**
  * Emitted when the window is about to close. The renderer runs whatever it has
  * to do on the way out and then acknowledges, which is what actually closes it.
  */
 export const WINDOW_CLOSE_REQUESTED_EVENT = "window://close-requested";
+
+/** A browser view the main process holds for a pane. */
+export type BrowserInfo = {
+	id: number;
+	url: string;
+	title: string;
+	canGoBack: boolean;
+	canGoForward: boolean;
+	loading: boolean;
+	/** The agent-browser session pinned to this page, once the app has bound
+	 *  one; an agent that uses it drives this pane and nothing else. */
+	session: string | null;
+};
+
+/** How an agent reaches the app's browser views over CDP, once known. */
+export type BrowserEndpoint = {
+	/** The remote debugging port, as digits — what `agent-browser --cdp` wants.
+	 *  Null when remote debugging failed to start. */
+	cdp: string | null;
+	/** Whether `agent-browser` was found on PATH, so the pane can say so. */
+	agentBrowser: boolean;
+};
+
+/** Emitted with a `BrowserInfo` whenever a browser view's page changes. */
+export const BROWSER_STATE_EVENT = "browser://state";
 
 // --- What the side panel shows about the folder a terminal is in -----------
 

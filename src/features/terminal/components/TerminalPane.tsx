@@ -21,11 +21,16 @@ export function TerminalPane({
 	}, [ptyId, onSession]);
 
 	return (
-		<div className="relative min-h-0 overflow-hidden bg-black">
-			{/* The emulator owns this element's children; never render into it. The
-			    padding is on this element on purpose: the fit addon subtracts it
-			    when sizing the grid, and the black behind it is the emulator's own. */}
-			<div ref={host} className="absolute inset-0 px-3 py-2" />
+		<div className="relative min-h-0 overflow-hidden bg-background">
+			{/* The inset is a wrapper, not padding on the host. The fit addon reads
+			    the host's own box to size the grid and gets the subtraction wrong by
+			    a few pixels, which spends the bottom padding and then some — the last
+			    row sat past the pane's edge. With the host a plain box the grid fits
+			    inside it, and the remainder below the last row shows `--background`,
+			    which is what the emulator paints too — see ../theme.ts. */}
+			<div className="absolute inset-0 px-3 py-2">
+				<div ref={host} className="h-full w-full" />
+			</div>
 
 			{match(session)
 				.with({ status: "starting" }, () => (

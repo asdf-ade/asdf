@@ -1,6 +1,8 @@
-appId: tools.buzzle.asdf
+# Reverse of where the project lives. Changing this after a release ships makes
+# Windows treat the next build as a different app and install it alongside.
+appId: io.github.asdf-ade.asdf
 productName: asdf
-copyright: Copyright © teamBuzzle
+copyright: Copyright © asdf contributors
 
 directories:
   output: release
@@ -22,7 +24,7 @@ asarUnpack:
 
 publish:
   provider: github
-  owner: teamBuzzle
+  owner: asdf-ade
   repo: asdf
   # release-please has already published the release for this tag. Without
   # this, electron-builder defaults to "draft", refuses the existing release

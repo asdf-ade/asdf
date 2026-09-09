@@ -3,16 +3,21 @@ import { fileURLToPath } from "node:url";
 import {
 	app,
 	BrowserWindow,
+	dialog,
 	ipcMain,
 	Menu,
 	nativeTheme,
 	shell,
 } from "electron";
 import {
+	BROWSER_STATE_EVENT,
+	CLONE_PROGRESS_EVENT,
 	TERMINAL_EXIT_EVENT,
 	TERMINAL_OUTPUT_EVENT,
 	WINDOW_CLOSE_REQUESTED_EVENT,
 } from "@/ipc/bindings";
+import { Browsers } from "./browser";
+import { clone } from "./git";
 import * as repo from "./repo";
 import { ok } from "./result";
 import { Registry } from "./terminal";
@@ -22,6 +27,13 @@ import { open as openWorkspace } from "./workspace";
 const directory = path.dirname(fileURLToPath(import.meta.url));
 
 const terminals = new Registry();
+
+// Every WebContents becomes a CDP target on this port, including the browser
+// panes — that is how agent-browser drives what the person sees. Port 0 lets
+// Chromium pick a free one and write it to DevToolsActivePort; `Browsers` reads
+// it back. It also exposes the app's own window on localhost, which is the
+// trade a local developer tool makes; see architecture.md.
+app.commandLine.appendSwitch("remote-debugging-port", "0");
 
 // The app draws its own chrome and has no use for a menu bar. macOS keeps its
 // default one, where the application menu is also what binds copy, paste and
@@ -36,7 +48,7 @@ let closing = false;
 // exposes, the frame before first paint. Left at the default it is white, which
 // flashes in a dark window. Mirrors --background in src/index.css.
 const background = () =>
-	nativeTheme.shouldUseDarkColors ? "#242424" : "#ffffff";
+	nativeTheme.shouldUseDarkColors ? "#0a0a0a" : "#ffffff";
 
 function createWindow(): BrowserWindow {
 	const window = new BrowserWindow({
@@ -71,6 +83,12 @@ function createWindow(): BrowserWindow {
 		return { action: "deny" };
 	});
 
+	// The panes live in the renderer and the views they show live here, so a
+	// renderer that reloads leaves every view it opened with no owner: nothing
+	// left to place it, hide it or close it, and it stays over the window at
+	// whatever bounds it last had. The reload is the end of those panes.
+	window.webContents.on("did-start-loading", () => browsers.closeAll());
+
 	window.on("close", (event) => {
 		if (closing) return;
 		event.preventDefault();
@@ -95,6 +113,47 @@ function createWindow(): BrowserWindow {
 }
 
 const updater = createUpdater(() => main);
+const browsers = new Browsers(
+	() => main,
+	(info) => main?.webContents.send(BROWSER_STATE_EVENT, info),
+);
+
+ipcMain.handle("browser://endpoint", () => browsers.describe().then(ok));
+ipcMain.handle("browser://open", (_event, { url }: { url: string }) =>
+	browsers.open(url),
+);
+ipcMain.handle(
+	"browser://place",
+	(
+		_event,
+		{
+			id,
+			bounds,
+		}: {
+			id: number;
+			bounds: { x: number; y: number; width: number; height: number };
+		},
+	) => browsers.place(id, bounds),
+);
+ipcMain.handle(
+	"browser://navigate",
+	(_event, { id, url }: { id: number; url: string }) =>
+		browsers.navigate(id, url),
+);
+ipcMain.handle(
+	"browser://go",
+	(
+		_event,
+		{ id, where }: { id: number; where: "back" | "forward" | "reload" },
+	) => browsers.go(id, where),
+);
+ipcMain.handle("browser://close", (_event, { id }: { id: number }) =>
+	browsers.close(id),
+);
+ipcMain.handle("browser://cover", (_event, { hidden }: { hidden: boolean }) => {
+	browsers.cover(hidden);
+	return ok(null);
+});
 
 ipcMain.handle("open_workspace", (_event, { path: raw }: { path: string }) =>
 	openWorkspace(raw),
@@ -165,6 +224,26 @@ ipcMain.handle("close_terminal", (_event, { id }: { id: number }) =>
 	terminals.close(id),
 );
 
+// The folder a workspace opens in. The OS dialog is the whole picker: it
+// browses, and its own "New folder" button is how a workspace gets a fresh
+// one, so there is nothing to build here for that.
+ipcMain.handle("pick_folder", async () => {
+	const window = main;
+	if (!window) return ok(null);
+	const picked = await dialog.showOpenDialog(window, {
+		properties: ["openDirectory", "createDirectory"],
+	});
+	return ok(picked.canceled ? null : (picked.filePaths[0] ?? null));
+});
+
+ipcMain.handle(
+	"clone_repo",
+	(_event, { url, parent }: { url: string; parent: string }) =>
+		clone(url, parent, (line) =>
+			main?.webContents.send(CLONE_PROGRESS_EVENT, line),
+		),
+);
+
 ipcMain.handle("updater://check", () => updater.check());
 ipcMain.handle("updater://download", () => updater.download());
 ipcMain.handle("updater://install", () => updater.install());
@@ -232,9 +311,11 @@ if (!app.requestSingleInstanceLock()) {
 		if (process.platform !== "darwin") app.quit();
 	});
 
-	// Killing the shells here is what keeps a quit from leaving one behind.
+	// Killing the shells here is what keeps a quit from leaving one behind; the
+	// browser views go with them.
 	app.on("before-quit", () => {
 		closing = true;
 		terminals.closeAll();
+		browsers.closeAll();
 	});
 }

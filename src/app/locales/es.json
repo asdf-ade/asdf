@@ -2,6 +2,19 @@
 	"app": {
 		"title": "asdf"
 	},
+	"browser": {
+		"title": "Navegador",
+		"open": "Nuevo navegador",
+		"address": "Dirección",
+		"back": "Atrás",
+		"forward": "Adelante",
+		"reload": "Recargar",
+		"connect": "Agente:",
+		"copy": "Copiar el comando",
+		"copied": "Copiado",
+		"missing": "agent-browser no está instalado. Ejecuta: npm install -g agent-browser",
+		"noCdp": "La depuración remota está desactivada; un agente no puede acceder a esta página."
+	},
 	"window": {
 		"minimize": "Minimizar",
 		"maximize": "Maximizar",
@@ -91,6 +104,13 @@
 			"open": "{{n}} abiertas"
 		},
 		"newSession": "Nueva terminal",
+		"newTab": {
+			"title": "Nueva pestaña",
+			"terminal": "Terminal",
+			"terminalHint": "Un shell en este espacio de trabajo",
+			"browser": "Navegador",
+			"browserHint": "Una página que tu agente puede manejar"
+		},
 		"sidePanel": "Panel del proyecto",
 		"newWorkspace": "Nuevo espacio de trabajo",
 		"terminalTitle": "Terminal {{n}}",
@@ -100,7 +120,24 @@
 			"name": "Nombre del espacio de trabajo",
 			"namePlaceholder": "web",
 			"cancel": "Cancelar",
-			"create": "Crear"
+			"back": "Atrás",
+			"create": "Crear",
+			"clone": "Clonar",
+			"folder": "Carpeta",
+			"parent": "Clonar en",
+			"noFolder": "Ninguna carpeta elegida",
+			"choose": "Elegir…",
+			"url": "URL del repositorio",
+			"urlPlaceholder": "https://github.com/owner/repo.git",
+			"cloning": "Clonando…",
+			"source": {
+				"empty": "Espacio vacío",
+				"emptyHint": "Empieza libre, sin carpeta.",
+				"folder": "Abrir una carpeta",
+				"folderHint": "Elige una, o crea una nueva en el selector",
+				"clone": "Clonar un repositorio",
+				"cloneHint": "Descárgalo en una carpeta nueva"
+			}
 		}
 	},
 	"settings": {

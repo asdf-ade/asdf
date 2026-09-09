@@ -1,5 +1,7 @@
 import type {
 	AppError,
+	BrowserEndpoint,
+	BrowserInfo,
 	DiffRow,
 	Issue,
 	PullRequest,
@@ -38,6 +40,11 @@ export async function call<T>(
 export const ipc = {
 	openWorkspace: (path: string) =>
 		call<WorkspaceInfo>("open_workspace", { path }),
+	/** The OS folder picker. Null when it was dismissed. */
+	pickFolder: () => call<string | null>("pick_folder"),
+	/** Clones into a new folder under `parent`, and answers with where. */
+	cloneRepo: (url: string, parent: string) =>
+		call<{ path: string }>("clone_repo", { url, parent }),
 	openTerminal: (cwd: string | null, cols: number, rows: number) =>
 		call<number>("open_terminal", { cwd, cols, rows }),
 	writeTerminal: (id: number, data: string) =>
@@ -58,4 +65,20 @@ export const ipc = {
 		call<null>("repo://commit", { root, message }),
 	repoIssues: (cwd: string) => call<Issue[]>("repo://issues", { cwd }),
 	repoPulls: (cwd: string) => call<PullRequest[]>("repo://pulls", { cwd }),
+
+	/** The main process holds the browser views; these are what a pane does. */
+	browserEndpoint: () => call<BrowserEndpoint>("browser://endpoint"),
+	browserOpen: (url: string) => call<BrowserInfo>("browser://open", { url }),
+	browserPlace: (
+		id: number,
+		bounds: { x: number; y: number; width: number; height: number },
+	) => call<null>("browser://place", { id, bounds }),
+	browserNavigate: (id: number, url: string) =>
+		call<null>("browser://navigate", { id, url }),
+	browserGo: (id: number, where: "back" | "forward" | "reload") =>
+		call<null>("browser://go", { id, where }),
+	browserClose: (id: number) => call<null>("browser://close", { id }),
+	/** Hide every browser view while a tab is dragged, so drop zones get the
+	 *  pointer; native views sit above the DOM. */
+	browserCover: (hidden: boolean) => call<null>("browser://cover", { hidden }),
 };

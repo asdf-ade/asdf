@@ -2,6 +2,19 @@
 	"app": {
 		"title": "asdf"
 	},
+	"browser": {
+		"title": "浏览器",
+		"open": "新建浏览器",
+		"address": "地址",
+		"back": "后退",
+		"forward": "前进",
+		"reload": "刷新",
+		"connect": "代理：",
+		"copy": "复制命令",
+		"copied": "已复制",
+		"missing": "未安装 agent-browser。请运行：npm install -g agent-browser",
+		"noCdp": "远程调试已关闭，代理无法访问此页面。"
+	},
 	"window": {
 		"minimize": "最小化",
 		"maximize": "最大化",
@@ -91,6 +104,13 @@
 			"open": "已打开 {{n}} 个"
 		},
 		"newSession": "新建终端",
+		"newTab": {
+			"title": "新建标签页",
+			"terminal": "终端",
+			"terminalHint": "此工作区中的一个 shell",
+			"browser": "浏览器",
+			"browserHint": "代理可以操作的页面"
+		},
 		"sidePanel": "项目面板",
 		"newWorkspace": "新建工作区",
 		"terminalTitle": "终端 {{n}}",
@@ -100,7 +120,24 @@
 			"name": "工作区名称",
 			"namePlaceholder": "web",
 			"cancel": "取消",
-			"create": "创建"
+			"back": "返回",
+			"create": "创建",
+			"clone": "克隆",
+			"folder": "文件夹",
+			"parent": "克隆到",
+			"noFolder": "未选择文件夹",
+			"choose": "选择…",
+			"url": "仓库地址",
+			"urlPlaceholder": "https://github.com/owner/repo.git",
+			"cloning": "正在克隆…",
+			"source": {
+				"empty": "空工作区",
+				"emptyHint": "不指定文件夹，自由开始。",
+				"folder": "打开文件夹",
+				"folderHint": "选择已有文件夹，或在选择器中新建一个",
+				"clone": "克隆仓库",
+				"cloneHint": "下载到新的文件夹"
+			}
 		}
 	},
 	"settings": {

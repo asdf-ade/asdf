@@ -1,14 +1,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ipc } from "@/ipc/client";
 import {
 	closePane as closeIn,
 	type DropTarget,
 	emptyWindow,
 	focusPane as focusIn,
+	leaves,
 	movePane as moveIn,
 	openPane,
 	type PaneWindow,
 } from "./panes";
 import type { Pane, Project, Session } from "./types";
+
+/** The browser views the panes of one window hold, so closing can end them. */
+const browsersOf = (window: PaneWindow) =>
+	window.groups
+		.flatMap((group) => group.panes)
+		.filter(
+			(pane): pane is Extract<Pane, { kind: "browser" }> =>
+				pane.kind === "browser",
+		);
 
 // Workspaces outlive the app; terminals do not. So the names are written to
 // storage and everything else starts empty.
@@ -16,7 +27,15 @@ const STORAGE_KEY = "workspaces";
 
 function loadProjects(): Project[] {
 	try {
-		return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]") as Project[];
+		const stored = JSON.parse(
+			localStorage.getItem(STORAGE_KEY) ?? "[]",
+		) as Project[];
+		// Workspaces written before a workspace could hold a folder have no
+		// `path` at all; they are the name-only kind, which is still a kind.
+		return stored.map((project) => ({
+			...project,
+			path: project.path ?? null,
+		}));
 	} catch {
 		return [];
 	}
@@ -61,6 +80,17 @@ export function useSessions() {
 	);
 	const activeProject = projects.find(
 		(project) => project.id === activeProjectId,
+	);
+
+	// The browser tabs of every workspace, so the sidebar can list them under
+	// their workspace the way it lists terminals. A workspace with no window
+	// yet has none.
+	const browsers = useMemo(
+		() =>
+			Object.fromEntries(
+				Object.entries(windows).map(([id, held]) => [id, browsersOf(held)]),
+			),
+		[windows],
 	);
 
 	const openIn = useCallback((projectId: string, pane: Pane) => {
@@ -156,12 +186,16 @@ export function useSessions() {
 	);
 
 	// A terminal tab is the terminal: closing it ends the shell, the way a
-	// terminal window does. Files, issues and pull requests are only views.
+	// terminal window does. Files, issues and pull requests are only views; a
+	// browser is a live page, so closing its tab ends the page — but only its
+	// own tab does, since the page belongs to the workspace and not to whatever
+	// terminal happened to be open when it was made.
 	const closePane = useCallback(
 		(id: string) => {
 			const pane = window.groups
 				.flatMap((group) => group.panes)
 				.find((item) => item.id === id);
+			if (pane?.kind === "browser") void ipc.browserClose(pane.browserId);
 			if (pane?.kind === "session")
 				setSessions((previous) =>
 					previous.filter((session) => session.id !== pane.sessionId),
@@ -173,6 +207,20 @@ export function useSessions() {
 			});
 		},
 		[activeProjectId, window],
+	);
+
+	// A browser opens as a tab in the active group, the way a new terminal
+	// does — not split off. The person splits it later by dragging, if they
+	// want. The view already exists in the main process; this is only its tab.
+	const openBrowser = useCallback(
+		(projectId: string, browserId: number) => {
+			openIn(projectId, {
+				kind: "browser",
+				id: `browser:${browserId}`,
+				browserId,
+			});
+		},
+		[openIn],
 	);
 
 	// A terminal opens in its tab the moment it is made. The title is the
@@ -190,19 +238,23 @@ export function useSessions() {
 		[openIn],
 	);
 
-	// A workspace is a name and opens straight into its first terminal.
+	// A workspace is a name and the folder its terminals open in. It opens
+	// empty, on the same "+" every other window shows, so making one does not
+	// decide what goes in it.
 	const createWorkspace = useCallback(
-		(name: string, terminalTitle: string) => {
+		(name: string, path: string | null = null) => {
 			const id = `p${Date.now()}`;
-			setProjects((previous) => [...previous, { id, name }]);
-			createTerminal(id, terminalTitle);
+			setProjects((previous) => [...previous, { id, name, path }]);
+			setActiveProjectId(id);
 		},
-		[createTerminal],
+		[],
 	);
 
-	// Forgetting a workspace closes its terminals.
+	// Forgetting a workspace closes its terminals, and their browsers.
 	const removeWorkspace = useCallback(
 		(projectId: string) => {
+			for (const browser of browsersOf(windows[projectId] ?? emptyWindow()))
+				void ipc.browserClose(browser.browserId);
 			setProjects((previous) => {
 				const next = previous.filter((item) => item.id !== projectId);
 				if (projectId === activeProjectId)
@@ -214,7 +266,7 @@ export function useSessions() {
 			);
 			setWindows(({ [projectId]: _dropped, ...rest }) => rest);
 		},
-		[activeProjectId],
+		[activeProjectId, windows],
 	);
 
 	return {
@@ -223,7 +275,15 @@ export function useSessions() {
 		/** Every open tab of the window, across its groups. */
 		panes: window.groups.flatMap((group) => group.panes),
 		paneGroups: window.groups,
+		/** How the groups are arranged, and their order on screen. */
+		layout: window.layout,
+		groupOrder: leaves(window.layout),
+		openBrowser,
+		/** Browser tabs by workspace, for the sidebar's list. */
+		browsers,
 		activeGroupId: activeGroup.id,
+		/** The tab on screen in the group new tabs open in. */
+		activeId,
 		focusGroup,
 		movePane,
 		activeProjectId,

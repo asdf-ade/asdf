@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { closePane, movePane, openPane, windowOf } from "./panes";
+import {
+	closePane,
+	type Layout,
+	leaves,
+	movePane,
+	openPane,
+	windowOf,
+} from "./panes";
 import type { Pane } from "./types";
 
 const tab = (n: number): Pane => ({
@@ -10,6 +17,19 @@ const tab = (n: number): Pane => ({
 
 const twoTabs = () => openPane(windowOf(tab(1)), tab(2));
 
+/** The tree with group ids replaced by the first tab each holds, so a test
+ *  can state a whole layout in one literal. */
+function shape(
+	layout: Layout,
+	groups: { id: string; panes: Pane[] }[],
+): unknown {
+	if (layout.kind === "leaf")
+		return groups.find((g) => g.id === layout.group)?.panes[0]?.id ?? "";
+	return {
+		[layout.direction]: layout.children.map((child) => shape(child, groups)),
+	};
+}
+
 describe("movePane", () => {
 	it("splits a tab off to the right and focuses the new group", () => {
 		const before = twoTabs();
@@ -18,10 +38,9 @@ describe("movePane", () => {
 			split: group.id,
 			side: "right",
 		});
-		expect(after.groups.map((g) => g.panes.map((p) => p.id))).toEqual([
-			["session:s1"],
-			["session:s2"],
-		]);
+		expect(shape(after.layout, after.groups)).toEqual({
+			row: ["session:s1", "session:s2"],
+		});
 		expect(after.active).toBe(after.groups[1].id);
 		expect(after.groups[0].activeId).toBe("session:s1");
 	});
@@ -32,7 +51,56 @@ describe("movePane", () => {
 			split: before.groups[0].id,
 			side: "left",
 		});
-		expect(after.groups[0].panes[0].id).toBe("session:s2");
+		expect(shape(after.layout, after.groups)).toEqual({
+			row: ["session:s2", "session:s1"],
+		});
+	});
+
+	it("splits top and bottom into a column", () => {
+		const before = twoTabs();
+		const below = movePane(before, "session:s2", {
+			split: before.groups[0].id,
+			side: "bottom",
+		});
+		expect(shape(below.layout, below.groups)).toEqual({
+			column: ["session:s1", "session:s2"],
+		});
+
+		const above = movePane(before, "session:s2", {
+			split: before.groups[0].id,
+			side: "top",
+		});
+		expect(shape(above.layout, above.groups)).toEqual({
+			column: ["session:s2", "session:s1"],
+		});
+	});
+
+	it("nests a column inside a row when the direction changes", () => {
+		let window = openPane(twoTabs(), tab(3));
+		const [group] = window.groups;
+		window = movePane(window, "session:s2", { split: group.id, side: "right" });
+		const right = window.groups[1];
+		window = movePane(window, "session:s3", {
+			split: right.id,
+			side: "bottom",
+		});
+		expect(shape(window.layout, window.groups)).toEqual({
+			row: ["session:s1", { column: ["session:s2", "session:s3"] }],
+		});
+		expect(leaves(window.layout)).toEqual(window.groups.map((g) => g.id));
+	});
+
+	it("becomes a sibling when the split already runs that way", () => {
+		let window = openPane(twoTabs(), tab(3));
+		const [group] = window.groups;
+		window = movePane(window, "session:s2", { split: group.id, side: "right" });
+		window = movePane(window, "session:s3", {
+			split: window.groups[1].id,
+			side: "right",
+		});
+		expect(shape(window.layout, window.groups)).toEqual({
+			row: ["session:s1", "session:s2", "session:s3"],
+		});
 	});
 
 	it("does nothing when a lone tab splits off its own group", () => {
@@ -57,6 +125,23 @@ describe("movePane", () => {
 		expect(merged.groups[0].id).toBe(left.id);
 		expect(merged.groups[0].activeId).toBe("session:s2");
 		expect(merged.groups[0].id).not.toBe(right.id);
+		expect(merged.layout).toEqual({ kind: "leaf", group: left.id });
+	});
+
+	it("collapses a split left with one child, and a nested one with it", () => {
+		let window = openPane(twoTabs(), tab(3));
+		const [group] = window.groups;
+		window = movePane(window, "session:s2", { split: group.id, side: "right" });
+		window = movePane(window, "session:s3", {
+			split: window.groups[1].id,
+			side: "bottom",
+		});
+		// Pull s3 back into the first group: the column is left with s2 alone
+		// and folds into the row, which is then a plain two-column row.
+		window = movePane(window, "session:s3", { group: group.id });
+		expect(shape(window.layout, window.groups)).toEqual({
+			row: ["session:s1", "session:s2"],
+		});
 	});
 });
 
@@ -66,6 +151,7 @@ describe("closePane", () => {
 		expect(after.groups).toHaveLength(1);
 		expect(after.groups[0].panes).toEqual([]);
 		expect(after.active).toBe(after.groups[0].id);
+		expect(after.layout).toEqual({ kind: "leaf", group: after.groups[0].id });
 	});
 
 	it("drops a split whose last tab closed", () => {
@@ -77,5 +163,66 @@ describe("closePane", () => {
 		const after = closePane(split, "session:s2");
 		expect(after.groups).toHaveLength(1);
 		expect(after.active).toBe(after.groups[0].id);
+		expect(after.layout.kind).toBe("leaf");
+	});
+});
+
+describe("movePane within a strip", () => {
+	const threeTabs = () => openPane(twoTabs(), tab(3));
+	const order = (window: ReturnType<typeof threeTabs>) =>
+		window.groups[0].panes.map((pane) => pane.id);
+
+	it("moves a tab left to the place the caret was in", () => {
+		const before = threeTabs();
+		const after = movePane(before, "session:s3", {
+			group: before.groups[0].id,
+			index: 1,
+		});
+		expect(order(after)).toEqual(["session:s1", "session:s3", "session:s2"]);
+	});
+
+	it("moves a tab right, counting the place from the strip it was dragged off", () => {
+		const before = threeTabs();
+		// Between s2 and s3 while s1 is still in the strip, so s1 ends up second.
+		const after = movePane(before, "session:s1", {
+			group: before.groups[0].id,
+			index: 2,
+		});
+		expect(order(after)).toEqual(["session:s2", "session:s1", "session:s3"]);
+	});
+
+	it("sends a tab to the end when no place is named", () => {
+		const before = threeTabs();
+		const after = movePane(before, "session:s1", {
+			group: before.groups[0].id,
+		});
+		expect(order(after)).toEqual(["session:s2", "session:s3", "session:s1"]);
+	});
+
+	it("leaves the window alone when the tab lands where it already was", () => {
+		const before = threeTabs();
+		for (const index of [1, 2]) {
+			expect(
+				movePane(before, "session:s2", { group: before.groups[0].id, index }),
+			).toBe(before);
+		}
+	});
+
+	it("drops a tab into another group at the place asked for", () => {
+		const split = movePane(threeTabs(), "session:s3", {
+			split: openPane(twoTabs(), tab(3)).groups[0].id,
+			side: "right",
+		});
+		const [left, right] = split.groups;
+		const after = movePane(split, "session:s1", {
+			group: right.id,
+			index: 0,
+		});
+		expect(
+			after.groups.find((g) => g.id === right.id)?.panes.map((p) => p.id),
+		).toEqual(["session:s1", "session:s3"]);
+		expect(
+			after.groups.find((g) => g.id === left.id)?.panes.map((p) => p.id),
+		).toEqual(["session:s2"]);
 	});
 });

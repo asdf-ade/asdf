@@ -2,6 +2,19 @@
 	"app": {
 		"title": "asdf"
 	},
+	"browser": {
+		"title": "ブラウザ",
+		"open": "新しいブラウザ",
+		"address": "アドレス",
+		"back": "戻る",
+		"forward": "進む",
+		"reload": "再読み込み",
+		"connect": "エージェント:",
+		"copy": "コマンドをコピー",
+		"copied": "コピーしました",
+		"missing": "agent-browser がインストールされていません。実行: npm install -g agent-browser",
+		"noCdp": "リモートデバッグが無効のため、エージェントはこのページにアクセスできません。"
+	},
 	"window": {
 		"minimize": "最小化",
 		"maximize": "最大化",
@@ -91,6 +104,13 @@
 			"open": "{{n}} 件を表示中"
 		},
 		"newSession": "新しいターミナル",
+		"newTab": {
+			"title": "新しいタブ",
+			"terminal": "ターミナル",
+			"terminalHint": "このワークスペースのシェル",
+			"browser": "ブラウザ",
+			"browserHint": "エージェントが操作できるページ"
+		},
 		"sidePanel": "プロジェクトパネル",
 		"newWorkspace": "新しいワークスペース",
 		"terminalTitle": "ターミナル {{n}}",
@@ -100,7 +120,24 @@
 			"name": "ワークスペース名",
 			"namePlaceholder": "web",
 			"cancel": "キャンセル",
-			"create": "完了"
+			"back": "戻る",
+			"create": "完了",
+			"clone": "クローン",
+			"folder": "フォルダ",
+			"parent": "クローン先",
+			"noFolder": "フォルダが未選択",
+			"choose": "選択…",
+			"url": "リポジトリ URL",
+			"urlPlaceholder": "https://github.com/owner/repo.git",
+			"cloning": "クローン中…",
+			"source": {
+				"empty": "空のワークスペース",
+				"emptyHint": "フォルダなしで自由に始めます。",
+				"folder": "フォルダを開く",
+				"folderHint": "既存のフォルダを選ぶか、選択画面で新規作成します",
+				"clone": "リポジトリをクローン",
+				"cloneHint": "新しいフォルダに取得します"
+			}
 		}
 	},
 	"settings": {

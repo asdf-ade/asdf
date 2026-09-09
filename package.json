@@ -6,7 +6,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/teamBuzzle/asdf.git"
+		"url": "git+https://github.com/asdf-ade/asdf.git"
 	},
 	"type": "module",
 	"main": "out/main/index.js",
