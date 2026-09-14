@@ -383,6 +383,10 @@ export function App() {
 										if (!sessions.activeProject) return newWorkspace();
 										setNewTabIn(group.id);
 									}}
+									onNewTerminal={() => {
+										if (!sessions.activeProject) return newWorkspace();
+										sessions.createSession(sessions.activeProjectId);
+									}}
 									dragging={dragging}
 									onDragStart={() => setDragging(true)}
 									onDragEnd={() => setDragging(false)}

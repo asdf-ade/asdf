@@ -107,6 +107,9 @@ type Props = {
 	onClose: (id: string) => void;
 	/** `+`: asks what the new tab should be. */
 	onNewTab: () => void;
+	/** The empty window's button. It says "new terminal", so it makes one at
+	 *  once rather than asking what the tab should be. */
+	onNewTerminal: () => void;
 	/** A tab is being dragged somewhere in the window, so show where it can
 	 *  land. */
 	dragging: boolean;
@@ -144,6 +147,7 @@ export function PaneArea({
 	onFocus,
 	onClose,
 	onNewTab,
+	onNewTerminal,
 	dragging,
 	onDragStart,
 	onDragEnd,
@@ -212,7 +216,7 @@ export function PaneArea({
 			<Button
 				variant="ghost"
 				size="sm"
-				onClick={onNewTab}
+				onClick={onNewTerminal}
 				className="h-7 gap-1.5 text-muted-foreground text-xs"
 			>
 				<Plus className="size-3.5" />

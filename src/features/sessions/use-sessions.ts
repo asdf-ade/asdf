@@ -119,6 +119,23 @@ export function useSessions() {
 		[],
 	);
 
+	/**
+	 * A workspace picked from the sidebar shows one of its own sessions, or its
+	 * empty window when it has none. The window is keyed by session, so setting
+	 * the workspace alone left another workspace's terminal on screen while "+"
+	 * made sessions in this one.
+	 */
+	const selectProject = useCallback(
+		(projectId: string) => {
+			setActiveProjectId(projectId);
+			if (activeSession?.projectId === projectId) return;
+			setActiveSessionId(
+				sessions.find((item) => item.projectId === projectId)?.id ?? "",
+			);
+		},
+		[activeSession, sessions],
+	);
+
 	/** A session picked from the sidebar comes to the front, as it was left. */
 	const openSession = useCallback(
 		(sessionId: string) => {
@@ -335,24 +352,31 @@ export function useSessions() {
 			for (const session of own)
 				for (const browser of browsersIn(windows[session.id] ?? emptyWindow()))
 					void ipc.browserClose(browser.browserId);
-			setProjects((previous) => {
-				const next = previous.filter((item) => item.id !== projectId);
-				if (projectId === activeProjectId)
-					setActiveProjectId(next[0]?.id ?? "");
-				return next;
-			});
+			// Worked out here rather than inside an updater, for the same reason as
+			// in `closeSession`. When the workspace on screen goes, the next one
+			// comes up showing one of its own sessions: moving the workspace without
+			// the session left an empty window beside a workspace that had one.
+			const left = projects.filter((item) => item.id !== projectId);
+			if (projectId === activeProjectId) {
+				const next = left[0];
+				setActiveProjectId(next?.id ?? "");
+				setActiveSessionId(
+					sessions.find((item) => item.projectId === next?.id)?.id ?? "",
+				);
+			} else if (own.some((session) => session.id === activeSessionId)) {
+				setActiveSessionId("");
+			}
+			setProjects(left);
 			setSessions((previous) =>
 				previous.filter((session) => session.projectId !== projectId),
 			);
-			if (own.some((session) => session.id === activeSessionId))
-				setActiveSessionId("");
 			setWindows((previous) => {
 				const next = { ...previous };
 				for (const session of own) delete next[session.id];
 				return next;
 			});
 		},
-		[activeProjectId, activeSessionId, sessions, windows],
+		[activeProjectId, activeSessionId, projects, sessions, windows],
 	);
 
 	return {
@@ -373,7 +397,7 @@ export function useSessions() {
 		focusGroup,
 		movePane,
 		activeProjectId,
-		selectProject: setActiveProjectId,
+		selectProject,
 		focusPane,
 		activeSession,
 		activeSessionId,
