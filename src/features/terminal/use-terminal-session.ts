@@ -45,6 +45,11 @@ export function useTerminalSession(
 	cwd: string | null,
 ) {
 	const [session, setSession] = useState<SessionStatus>({ status: "starting" });
+	// What the emulator is painting its background with. The pane behind it has
+	// to use the same colour: the grid never fills the pane exactly, so whatever
+	// the pane is drew a frame around the terminal the moment the two stopped
+	// agreeing — which is what reading the system profile made happen.
+	const [surface, setSurface] = useState<string | null>(null);
 	const terminal = useRef<Terminal | null>(null);
 
 	useEffect(() => {
@@ -72,6 +77,14 @@ export function useTerminalSession(
 		fit.fit();
 		terminal.current = term;
 
+		/** Repaints the emulator, and tells the pane behind it what colour to be. */
+		const paint = (dark: boolean, profile: SystemTerminal | null) => {
+			const theme = terminalTheme(dark, profile);
+			term.options.theme = theme;
+			setSurface(theme.background ?? null);
+		};
+		paint(isDark(), null);
+
 		// The machine's profile, once it is known. The shell is already running
 		// by then, so the palette is swapped under it rather than the emulator
 		// rebuilt — the same move a theme change makes.
@@ -79,7 +92,7 @@ export function useTerminalSession(
 		void askSystemProfile().then((profile) => {
 			if (disposed) return;
 			system = profile;
-			term.options.theme = terminalTheme(isDark(), system);
+			paint(isDark(), system);
 			if (profile?.font) {
 				term.options.fontFamily = `"${profile.font.family}", ui-monospace, monospace`;
 				term.options.fontSize = profile.font.size;
@@ -92,7 +105,7 @@ export function useTerminalSession(
 		// does not turn light because this window did.
 		cleanups.push(
 			watchTheme((dark) => {
-				term.options.theme = terminalTheme(dark, system);
+				paint(dark, system);
 			}),
 		);
 
@@ -160,5 +173,5 @@ export function useTerminalSession(
 		};
 	}, [host, cwd]);
 
-	return { session };
+	return { session, surface };
 }
