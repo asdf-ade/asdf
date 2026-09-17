@@ -61,7 +61,7 @@
 		"shadcn": "^4.19.1",
 		"typescript": "~5.8.3",
 		"vite": "^7.0.4",
-		"vitest": "^4.1.11"
+		"vitest": "^5.0.0"
 	},
 	"packageManager": "pnpm@10.14.0",
 	"engines": {
