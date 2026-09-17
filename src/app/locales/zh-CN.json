@@ -107,7 +107,7 @@
 		"newTab": {
 			"title": "新建标签页",
 			"terminal": "终端",
-			"terminalHint": "此工作区中的一个 shell",
+			"terminalHint": "在此工作区中再开一个会话，拥有自己的 shell",
 			"browser": "浏览器",
 			"browserHint": "代理可以操作的页面"
 		},

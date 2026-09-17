@@ -107,7 +107,7 @@
 		"newTab": {
 			"title": "New tab",
 			"terminal": "Terminal",
-			"terminalHint": "A shell in this workspace",
+			"terminalHint": "Another session in this workspace, with its own shell",
 			"browser": "Browser",
 			"browserHint": "A page your agent can drive"
 		},

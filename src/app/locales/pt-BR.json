@@ -107,7 +107,7 @@
 		"newTab": {
 			"title": "Nova aba",
 			"terminal": "Terminal",
-			"terminalHint": "Um shell neste espaço de trabalho",
+			"terminalHint": "Outra sessão neste espaço de trabalho, com o seu próprio shell",
 			"browser": "Navegador",
 			"browserHint": "Uma página que seu agente pode conduzir"
 		},

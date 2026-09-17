@@ -46,11 +46,14 @@ const tabIcon: Partial<Record<Pane["kind"], LucideIcon>> = {
 function tabLabel(
 	pane: Pane,
 	sessions: Session[],
+	sessionTitle: (session: Session) => string,
 	browserTitle: (browserId: number) => string,
 ): string {
 	switch (pane.kind) {
-		case "session":
-			return sessions.find((item) => item.id === pane.sessionId)?.title ?? "";
+		case "session": {
+			const session = sessions.find((item) => item.id === pane.sessionId);
+			return session ? sessionTitle(session) : "";
+		}
 		case "file":
 			return pane.path.split("/").pop() ?? pane.path;
 		case "browser":
@@ -104,6 +107,9 @@ type Props = {
 	onClose: (id: string) => void;
 	/** `+`: asks what the new tab should be. */
 	onNewTab: () => void;
+	/** The empty window's button. It says "new terminal", so it makes one at
+	 *  once rather than asking what the tab should be. */
+	onNewTerminal: () => void;
 	/** A tab is being dragged somewhere in the window, so show where it can
 	 *  land. */
 	dragging: boolean;
@@ -120,6 +126,8 @@ type Props = {
 	 *  whether it is the showing one, since a native view must be hidden by
 	 *  hand. */
 	renderBrowser: (browserId: number, visible: boolean) => ReactNode;
+	/** What a session is called, numbered within its workspace. */
+	sessionTitle: (session: Session) => string;
 	/** What a browser tab is called: its page title, once it has one. */
 	browserTitle: (browserId: number) => string;
 };
@@ -139,6 +147,7 @@ export function PaneArea({
 	onFocus,
 	onClose,
 	onNewTab,
+	onNewTerminal,
 	dragging,
 	onDragStart,
 	onDragEnd,
@@ -147,6 +156,7 @@ export function PaneArea({
 	trailing,
 	renderAgent,
 	renderBrowser,
+	sessionTitle,
 	browserTitle,
 }: Props) {
 	const { t } = useTranslation();
@@ -206,7 +216,7 @@ export function PaneArea({
 			<Button
 				variant="ghost"
 				size="sm"
-				onClick={onNewTab}
+				onClick={onNewTerminal}
 				className="h-7 gap-1.5 text-muted-foreground text-xs"
 			>
 				<Plus className="size-3.5" />
@@ -246,7 +256,7 @@ export function PaneArea({
 						{at === index && <Caret />}
 						<Tab
 							pane={pane}
-							label={tabLabel(pane, sessions, browserTitle)}
+							label={tabLabel(pane, sessions, sessionTitle, browserTitle)}
 							active={pane.id === active?.id}
 							focused={focused}
 							onFocus={() => onFocus(pane.id)}
