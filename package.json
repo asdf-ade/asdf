@@ -1,7 +1,7 @@
 {
 	"name": "asdf",
 	"private": true,
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"description": "Agentic development environment for running coding agents like Claude Code and Codex in parallel, each in its own git worktree.",
 	"license": "MIT",
 	"repository": {
