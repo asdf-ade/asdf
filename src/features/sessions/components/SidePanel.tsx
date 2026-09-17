@@ -29,6 +29,7 @@ import type {
 	ReviewState,
 } from "../types";
 import { FileExplorer } from "./FileExplorer";
+import { SearchPanel } from "./SearchPanel";
 
 type View = "files" | "changes" | "issues" | "pulls";
 
@@ -97,7 +98,7 @@ type Props = {
 	onCommit: (message: string) => Promise<boolean>;
 	/** `dir` is what `path` is relative to: the shell's folder for the tree,
 	 *  the repository root for a change. */
-	onOpenFile: (dir: string, path: string) => void;
+	onOpenFile: (dir: string, path: string, line?: number) => void;
 	onOpenIssue: (number: number) => void;
 	onOpenPull: (number: number) => void;
 };
@@ -135,7 +136,7 @@ export function SidePanel({
 	};
 
 	return (
-		<aside className="flex min-w-0 flex-1 flex-col bg-muted/30">
+		<aside className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/30">
 			{/* One view at a time. Stacking them would leave every list too short to
 			    read and the tree squeezed to nothing. */}
 			<nav
@@ -174,17 +175,6 @@ export function SidePanel({
 				})}
 			</nav>
 
-			{/* The folder every view is about, so a `cd` in the shell is visible
-			    here without reading the prompt. */}
-			{cwd && (
-				<p
-					title={cwd}
-					className="truncate border-b px-3 py-1 font-mono text-[10px] text-muted-foreground"
-				>
-					{cwd}
-				</p>
-			)}
-
 			{!cwd ? (
 				<Empty>{t("session.files.noSession")}</Empty>
 			) : error ? (
@@ -192,10 +182,15 @@ export function SidePanel({
 			) : !repo ? (
 				<Empty>{t("session.files.loading")}</Empty>
 			) : view === "files" ? (
-				<FileExplorer
-					tree={repo.tree}
-					onOpen={(path) => onOpenFile(repo.cwd, path)}
-				/>
+				<SearchPanel
+					cwd={repo.cwd}
+					onOpen={(path, line) => onOpenFile(repo.cwd, path, line)}
+				>
+					<FileExplorer
+						tree={repo.tree}
+						onOpen={(path) => onOpenFile(repo.cwd, path)}
+					/>
+				</SearchPanel>
 			) : view === "changes" ? (
 				<SourceControl
 					repo={repo}

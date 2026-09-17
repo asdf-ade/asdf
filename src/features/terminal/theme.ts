@@ -1,4 +1,5 @@
 import type { ITheme } from "@xterm/xterm";
+import type { SystemTerminal } from "@/ipc/bindings";
 
 /**
  * The emulator's palette, one per app theme.
@@ -80,16 +81,61 @@ function cssColor(name: string, fallback: string): string {
 	return `#${hex(red)}${hex(green)}${hex(blue)}`;
 }
 
-export function terminalTheme(dark: boolean): ITheme {
-	const background = cssColor("--background", dark ? "#0a0a0a" : "#ffffff");
-	const foreground = cssColor("--foreground", dark ? "#fafafa" : "#0a0a0a");
+/** The sixteen, in the order `SystemTerminal.ansi` gives them. */
+const ANSI_NAMES = [
+	"black",
+	"red",
+	"green",
+	"yellow",
+	"blue",
+	"magenta",
+	"cyan",
+	"white",
+	"brightBlack",
+	"brightRed",
+	"brightGreen",
+	"brightYellow",
+	"brightBlue",
+	"brightMagenta",
+	"brightCyan",
+	"brightWhite",
+] as const;
+
+const paletteOf = (ansi: string[]) =>
+	Object.fromEntries(
+		ANSI_NAMES.map((name, index) => [name, ansi[index]]),
+	) as Record<(typeof ANSI_NAMES)[number], string>;
+
+/**
+ * What the emulator paints with.
+ *
+ * The machine's own terminal wins wherever it answered, so the pane reads as
+ * the terminal its user already has rather than as a copy of one. It wins per
+ * value, not all at once: a profile that names a font and no colours gives up
+ * its font and nothing else, and the app's palette fills the rest in.
+ *
+ * With no profile to read — Linux, or a Terminal.app nobody has opened — this
+ * is what it always was: the app's surface colours, and a palette picked for
+ * the theme it is in.
+ */
+export function terminalTheme(
+	dark: boolean,
+	system: SystemTerminal | null,
+): ITheme {
+	const background =
+		system?.background ??
+		cssColor("--background", dark ? "#0a0a0a" : "#ffffff");
+	const foreground =
+		system?.foreground ??
+		cssColor("--foreground", dark ? "#fafafa" : "#0a0a0a");
 	return {
 		background,
 		foreground,
-		cursor: foreground,
+		cursor: system?.cursor ?? foreground,
 		cursorAccent: background,
-		selectionBackground: dark ? "#ffffff40" : "#0969da33",
-		...(dark ? ANSI_DARK : ANSI_LIGHT),
+		selectionBackground:
+			system?.selection ?? (dark ? "#ffffff40" : "#0969da33"),
+		...(system?.ansi ? paletteOf(system.ansi) : dark ? ANSI_DARK : ANSI_LIGHT),
 	};
 }
 

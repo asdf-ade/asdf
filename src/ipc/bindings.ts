@@ -38,6 +38,53 @@ export type DownloadProgress = {
 	total: number | null;
 };
 
+/**
+ * What the machine's own terminal looks like, as far as it could be read.
+ *
+ * Every field is nullable on its own: a profile that sets a font and no
+ * colours contributes the font, and the app's palette fills in the rest. The
+ * sixteen ANSI colours are all-or-nothing, because half of someone's palette
+ * mixed with half of ours is a third palette neither chose.
+ */
+export type SystemTerminal = {
+	/** The profile this came from, for saying which one is in use. */
+	source: string;
+	font: { family: string; size: number } | null;
+	background: string | null;
+	foreground: string | null;
+	cursor: string | null;
+	selection: string | null;
+	/** Black, red, green, yellow, blue, magenta, cyan, white, then the same
+	 *  eight bright. */
+	ansi: string[] | null;
+};
+
+/** How a search reads its query. The three toggles an editor's box carries,
+ *  plus the globs its "files to include" takes. */
+export type SearchOptions = {
+	matchCase: boolean;
+	wholeWord: boolean;
+	regex: boolean;
+	include: string;
+};
+
+/** One matching line: where it is, what it says, and which spans of it
+ *  matched, as [start, end) offsets into `text`. */
+export type SearchLine = {
+	number: number;
+	text: string;
+	ranges: [number, number][];
+};
+
+/** What a search found, grouped by file the way an editor lists it. */
+export type SearchResult = {
+	files: { path: string; lines: SearchLine[] }[];
+	matches: number;
+	/** True when the search stopped counting; the panel says so rather than
+	 *  reporting a total it does not have. */
+	capped: boolean;
+};
+
 /** Emitted for every chunk a session prints. */
 export const TERMINAL_OUTPUT_EVENT = "terminal://output";
 

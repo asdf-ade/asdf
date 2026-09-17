@@ -88,8 +88,6 @@
 			"title": "变更"
 		},
 		"files": {
-			"search": "搜索文件",
-			"noMatch": "没有匹配的文件。",
 			"pick": "选择文件即可查看内容。",
 			"noPreview": "该文件没有可预览的内容。",
 			"title": "文件",
@@ -98,6 +96,18 @@
 			"byName": "名称 · {{n}}",
 			"byContent": "内容 · {{n}}",
 			"loading": "加载中…"
+		},
+		"search": {
+			"query": "搜索",
+			"include": "包含的文件",
+			"matchCase": "区分大小写",
+			"wholeWord": "全字匹配",
+			"regex": "使用正则表达式",
+			"searching": "正在搜索…",
+			"none": "没有结果。",
+			"count": "在 {{files}} 个文件中找到 {{matches}} 处",
+			"cappedCount": "在 {{files}} 个文件中的前 {{matches}} 处",
+			"toggleGlobs": "展开搜索选项"
 		},
 		"pane": {
 			"close": "关闭窗口",
@@ -113,31 +123,24 @@
 		},
 		"sidePanel": "项目面板",
 		"newWorkspace": "新建工作区",
+		"workspaces": "工作区",
 		"terminalTitle": "终端 {{n}}",
 		"removeWorkspace": "移除工作区",
 		"workspace": {
-			"title": "新建工作区",
-			"name": "工作区名称",
 			"namePlaceholder": "web",
-			"cancel": "取消",
-			"back": "返回",
-			"create": "创建",
-			"clone": "克隆",
-			"folder": "文件夹",
+			"menu": "工作区选项",
+			"chooseFolder": "选择文件夹…",
+			"clearFolder": "取消关联文件夹",
+			"cloneRepo": "克隆仓库…",
+			"cloneTitle": "克隆仓库",
+			"url": "仓库地址",
+			"urlPlaceholder": "https://github.com/owner/repo.git",
 			"parent": "克隆到",
 			"noFolder": "未选择文件夹",
 			"choose": "选择…",
-			"url": "仓库地址",
-			"urlPlaceholder": "https://github.com/owner/repo.git",
-			"cloning": "正在克隆…",
-			"source": {
-				"empty": "空工作区",
-				"emptyHint": "不指定文件夹，自由开始。",
-				"folder": "打开文件夹",
-				"folderHint": "选择已有文件夹，或在选择器中新建一个",
-				"clone": "克隆仓库",
-				"cloneHint": "下载到新的文件夹"
-			}
+			"cancel": "取消",
+			"clone": "克隆",
+			"cloning": "正在克隆…"
 		}
 	},
 	"settings": {
