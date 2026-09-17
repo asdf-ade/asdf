@@ -26,8 +26,8 @@ import { useUpdater } from "@/features/updater/use-updater";
 import { ipc } from "@/ipc/client";
 import { platform } from "@/ipc/platform";
 import { cn } from "@/lib/utils";
+import { CloneRepoDialog } from "./CloneRepoDialog";
 import { NewTabDialog, type TabKind } from "./NewTabDialog";
-import { NewWorkspaceDialog } from "./NewWorkspaceDialog";
 import { SettingsDialog, type Theme } from "./SettingsDialog";
 import { useResizable } from "./use-resizable";
 
@@ -178,7 +178,11 @@ export function App() {
 	const sessions = useSessions();
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [theme, setTheme] = useState<Theme>("system");
-	const [workspaceOpen, setWorkspaceOpen] = useState(false);
+	// The sidebar's name field: what is in it, and null when it is closed. Held
+	// here because the empty window's buttons open it too.
+	const [naming, setNaming] = useState<string | null>(null);
+	// The workspace a clone is being set up for, and null when none is.
+	const [cloningInto, setCloningInto] = useState<string | null>(null);
 	const [dragging, setDragging] = useState(false);
 	// Which pty sits behind each terminal tab, so the panel can ask the OS
 	// where that shell is. The tab on screen decides what the panel shows.
@@ -214,7 +218,7 @@ export function App() {
 	// answered by putting the views away until the thing on top is done with.
 	const overlay =
 		dragging ||
-		workspaceOpen ||
+		cloningInto !== null ||
 		settingsOpen ||
 		updater.open ||
 		newTabIn !== null;
@@ -276,9 +280,23 @@ export function App() {
 	const sessionTitle = (session: Session) =>
 		t("session.terminalTitle", { n: session.ordinal });
 
-	// A workspace opens empty and its "+" fills it. With no workspace yet, "+"
-	// makes one first.
-	const newWorkspace = () => setWorkspaceOpen(true);
+	/**
+	 * Gives a workspace the folder the OS picker answers with.
+	 *
+	 * A dismissed picker answers with nothing, which is an answer: it leaves the
+	 * workspace's folder alone rather than clearing it. Clearing one is its own
+	 * item in the menu.
+	 */
+	const chooseFolder = async (projectId: string) => {
+		const picked = await ipc.pickFolder();
+		if (picked.ok && picked.value)
+			sessions.setWorkspacePath(projectId, picked.value);
+	};
+
+	// With no workspace yet there is nothing for "+" to open a tab in, so it
+	// opens the sidebar's name field instead — the one place a workspace is
+	// made, wherever the asking started.
+	const newWorkspace = () => setNaming("");
 
 	// What "+" resolves to once the dialog answers. A terminal is a session, so
 	// asking for one opens another window of the same workspace rather than a
@@ -333,7 +351,14 @@ export function App() {
 							onSelectProject={sessions.selectProject}
 							onOpenSession={sessions.openSession}
 							onOpenBrowser={sessions.openBrowser}
-							onNewWorkspace={newWorkspace}
+							naming={naming}
+							onNaming={setNaming}
+							onCreateWorkspace={(name) => sessions.createWorkspace(name)}
+							onChooseFolder={(projectId) => void chooseFolder(projectId)}
+							onClearFolder={(projectId) =>
+								sessions.setWorkspacePath(projectId, null)
+							}
+							onCloneInto={setCloningInto}
 							onRemoveWorkspace={sessions.removeWorkspace}
 						/>
 
@@ -489,8 +514,8 @@ export function App() {
 							reviewOf={repo.reviewOf}
 							onRefreshGithub={() => void repo.refreshGithub()}
 							onCommit={repo.commit}
-							onOpenFile={(dir, path) =>
-								active && sessions.openFile(active.id, dir, path)
+							onOpenFile={(dir, path, line) =>
+								active && sessions.openFile(active.id, dir, path, line)
 							}
 							onOpenIssue={sessions.openIssue}
 							onOpenPull={sessions.openPull}
@@ -533,10 +558,12 @@ export function App() {
 				</button>
 			</footer>
 
-			<NewWorkspaceDialog
-				open={workspaceOpen}
-				onOpenChange={setWorkspaceOpen}
-				onCreate={(name, path) => sessions.createWorkspace(name, path)}
+			<CloneRepoDialog
+				open={cloningInto !== null}
+				onOpenChange={(open) => !open && setCloningInto(null)}
+				onCloned={(path) =>
+					cloningInto && sessions.setWorkspacePath(cloningInto, path)
+				}
 			/>
 
 			<NewTabDialog

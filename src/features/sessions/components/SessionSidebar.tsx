@@ -1,15 +1,27 @@
 import {
 	ChevronDown,
 	ChevronRight,
+	FolderOpen,
+	GitBranch,
 	Globe,
 	type LucideIcon,
+	MoreHorizontal,
 	Plus,
 	TerminalSquare,
+	Unlink,
 	X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { Project, Session } from "../types";
 
@@ -31,7 +43,17 @@ type Props = {
 	onSelectProject: (projectId: string) => void;
 	onOpenSession: (sessionId: string) => void;
 	onOpenBrowser: (projectId: string, browserId: number) => void;
-	onNewWorkspace: () => void;
+	/** What is typed into the header's input, and null when it is not open.
+	 *  Held by the shell so the empty window's buttons can open it too. */
+	naming: string | null;
+	onNaming: (value: string | null) => void;
+	/** The name typed into the header's input. The workspace opens with its
+	 *  first terminal already in it. */
+	onCreateWorkspace: (name: string) => void;
+	/** The OS picker, then the folder becomes this workspace's. */
+	onChooseFolder: (projectId: string) => void;
+	onClearFolder: (projectId: string) => void;
+	onCloneInto: (projectId: string) => void;
 	onRemoveWorkspace: (projectId: string) => void;
 };
 
@@ -51,11 +73,21 @@ export function SessionSidebar({
 	onSelectProject,
 	onOpenSession,
 	onOpenBrowser,
-	onNewWorkspace,
+	naming,
+	onNaming,
+	onCreateWorkspace,
+	onChooseFolder,
+	onClearFolder,
+	onCloneInto,
 	onRemoveWorkspace,
 }: Props) {
 	const { t } = useTranslation();
 	const [folded, setFolded] = useState<ReadonlySet<string>>(new Set());
+	const field = useRef<HTMLInputElement | null>(null);
+
+	useEffect(() => {
+		if (naming !== null) field.current?.focus();
+	}, [naming]);
 
 	const toggle = (id: string) =>
 		setFolded((previous) => {
@@ -64,21 +96,57 @@ export function SessionSidebar({
 			return next;
 		});
 
+	const commit = () => {
+		const name = (naming ?? "").trim();
+		onNaming(null);
+		// An empty name is not a workspace called nothing; it is someone who
+		// changed their mind, which is what Escape does too.
+		if (name) onCreateWorkspace(name);
+	};
+
 	return (
 		<nav
 			aria-label={t("session.sidebarLabel")}
 			className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1.5 pb-2"
 		>
-			{/* First row of the list, so a new workspace is made where it will
-			    appear. */}
-			<button
-				type="button"
-				onClick={onNewWorkspace}
-				className="flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs hover:bg-accent/60"
-			>
-				<Plus className="size-3.5 shrink-0 text-muted-foreground" />
-				<span className="truncate">{t("session.newWorkspace")}</span>
-			</button>
+			{/* What the list is, and the one thing to do to it. The "+" sits at the
+			    far end so the heading reads as a heading and not as a button. */}
+			<div className="flex items-center gap-1 pr-0.5 pl-2">
+				<span className="flex-1 truncate font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
+					{t("session.workspaces")}
+				</span>
+				<Button
+					size="icon"
+					variant="ghost"
+					aria-label={t("session.newWorkspace")}
+					title={t("session.newWorkspace")}
+					onClick={() => onNaming("")}
+					className="size-6 shrink-0 text-muted-foreground hover:text-foreground"
+				>
+					<Plus className="size-3.5" />
+				</Button>
+			</div>
+
+			{naming !== null && (
+				<div className="px-0.5 pt-1">
+					<Input
+						ref={field}
+						value={naming}
+						aria-label={t("session.newWorkspace")}
+						placeholder={t("session.workspace.namePlaceholder")}
+						onChange={(event) => onNaming(event.target.value)}
+						onKeyDown={(event) => {
+							if (event.key === "Enter") commit();
+							if (event.key === "Escape") onNaming(null);
+						}}
+						// Clicking away is the same answer as Escape: the row was in the
+						// way of whatever was clicked, and keeping it would be a modal
+						// that never said it was one.
+						onBlur={() => onNaming(null)}
+						className="h-7 bg-background/70 text-xs"
+					/>
+				</div>
+			)}
 
 			<ul className="mt-1 space-y-0.5">
 				{projects.map((project) => {
@@ -136,16 +204,54 @@ export function SessionSidebar({
 										</span>
 									)}
 								</button>
-								<Button
-									size="icon"
-									variant="ghost"
-									aria-label={t("session.removeWorkspace")}
-									title={t("session.removeWorkspace")}
-									onClick={() => onRemoveWorkspace(project.id)}
-									className="mr-1 size-5 shrink-0 opacity-0 focus-visible:opacity-100 group-hover:opacity-100"
-								>
-									<X className="size-3" />
-								</Button>
+
+								{/* The folder and the end of the workspace live here rather
+								    than in the dialog that used to make it: they are things
+								    done to a workspace that exists, and making one is only
+								    typing its name. */}
+								<DropdownMenu>
+									<DropdownMenuTrigger
+										render={
+											<Button
+												size="icon"
+												variant="ghost"
+												aria-label={t("session.workspace.menu")}
+												title={t("session.workspace.menu")}
+												className="mr-1 size-5 shrink-0 opacity-0 focus-visible:opacity-100 group-hover:opacity-100 data-[popup-open]:opacity-100"
+											>
+												<MoreHorizontal className="size-3" />
+											</Button>
+										}
+									/>
+									<DropdownMenuContent align="end" className="w-52">
+										<DropdownMenuItem
+											onClick={() => onChooseFolder(project.id)}
+										>
+											<FolderOpen className="size-3.5" />
+											{t("session.workspace.chooseFolder")}
+										</DropdownMenuItem>
+										<DropdownMenuItem onClick={() => onCloneInto(project.id)}>
+											<GitBranch className="size-3.5" />
+											{t("session.workspace.cloneRepo")}
+										</DropdownMenuItem>
+										{project.path && (
+											<DropdownMenuItem
+												onClick={() => onClearFolder(project.id)}
+											>
+												<Unlink className="size-3.5" />
+												{t("session.workspace.clearFolder")}
+											</DropdownMenuItem>
+										)}
+										<DropdownMenuSeparator />
+										<DropdownMenuItem
+											variant="destructive"
+											onClick={() => onRemoveWorkspace(project.id)}
+										>
+											<X className="size-3.5" />
+											{t("session.removeWorkspace")}
+										</DropdownMenuItem>
+									</DropdownMenuContent>
+								</DropdownMenu>
 							</div>
 
 							{open && own.length + pages.length > 0 && (

@@ -88,8 +88,6 @@
 			"title": "Changes"
 		},
 		"files": {
-			"search": "Search files",
-			"noMatch": "Nothing matches.",
 			"pick": "Pick a file to read it.",
 			"noPreview": "No preview for this file.",
 			"title": "Files",
@@ -98,6 +96,17 @@
 			"byName": "Name · {{n}}",
 			"byContent": "Contents · {{n}}",
 			"loading": "Loading…"
+		},
+		"search": {
+			"query": "Search",
+			"include": "Files to include",
+			"matchCase": "Match case",
+			"wholeWord": "Match whole word",
+			"regex": "Use regular expression",
+			"searching": "Searching…",
+			"none": "No results.",
+			"count": "{{matches}} results in {{files}} files",
+			"cappedCount": "First {{matches}} results in {{files}} files"
 		},
 		"pane": {
 			"close": "Close window",
@@ -113,31 +122,24 @@
 		},
 		"sidePanel": "Project panel",
 		"newWorkspace": "New workspace",
+		"workspaces": "Workspaces",
 		"terminalTitle": "Terminal {{n}}",
 		"removeWorkspace": "Remove workspace",
 		"workspace": {
-			"title": "New workspace",
-			"name": "Workspace name",
 			"namePlaceholder": "web",
-			"cancel": "Cancel",
-			"back": "Back",
-			"create": "Create",
-			"clone": "Clone",
-			"folder": "Folder",
+			"menu": "Workspace options",
+			"chooseFolder": "Choose folder…",
+			"clearFolder": "Detach folder",
+			"cloneRepo": "Clone repository…",
+			"cloneTitle": "Clone repository",
+			"url": "Repository URL",
+			"urlPlaceholder": "https://github.com/owner/repo.git",
 			"parent": "Clone into",
 			"noFolder": "No folder chosen",
 			"choose": "Choose…",
-			"url": "Repository URL",
-			"urlPlaceholder": "https://github.com/owner/repo.git",
-			"cloning": "Cloning…",
-			"source": {
-				"empty": "Empty workspace",
-				"emptyHint": "Start free, with no folder.",
-				"folder": "Open a folder",
-				"folderHint": "Pick one, or make a new one in the picker",
-				"clone": "Clone a repository",
-				"cloneHint": "Fetch it into a new folder"
-			}
+			"cancel": "Cancel",
+			"clone": "Clone",
+			"cloning": "Cloning…"
 		}
 	},
 	"settings": {

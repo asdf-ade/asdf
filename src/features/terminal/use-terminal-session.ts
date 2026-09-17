@@ -2,6 +2,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import { useEffect, useRef, useState } from "react";
 import {
+	type SystemTerminal,
 	TERMINAL_EXIT_EVENT,
 	TERMINAL_OUTPUT_EVENT,
 	type TerminalOutput,
@@ -9,6 +10,21 @@ import {
 import { ipc } from "@/ipc/client";
 import { platform } from "@/ipc/platform";
 import { isDark, terminalTheme, watchTheme } from "./theme";
+
+/**
+ * The machine's terminal profile, asked for once for the whole app.
+ *
+ * A promise rather than state: every pane wants the same answer, it never
+ * changes while the app runs, and a pane that opens before the answer arrives
+ * would otherwise paint in the app's colours and then flash into the system's.
+ */
+let systemProfile: Promise<SystemTerminal | null> | null = null;
+const askSystemProfile = () => {
+	systemProfile ??= ipc
+		.systemTerminal()
+		.then((result) => (result.ok ? result.value : null));
+	return systemProfile;
+};
 
 export type SessionStatus =
 	| { status: "starting" }
@@ -48,7 +64,7 @@ export function useTerminalSession(
 				"ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
 			fontSize: 13,
 			allowProposedApi: true,
-			theme: terminalTheme(isDark()),
+			theme: terminalTheme(isDark(), null),
 		});
 		const fit = new FitAddon();
 		term.loadAddon(fit);
@@ -56,11 +72,27 @@ export function useTerminalSession(
 		fit.fit();
 		terminal.current = term;
 
-		// The shell keeps running across a theme change, so the palette is
-		// swapped under it rather than the emulator rebuilt.
+		// The machine's profile, once it is known. The shell is already running
+		// by then, so the palette is swapped under it rather than the emulator
+		// rebuilt — the same move a theme change makes.
+		let system: SystemTerminal | null = null;
+		void askSystemProfile().then((profile) => {
+			if (disposed) return;
+			system = profile;
+			term.options.theme = terminalTheme(isDark(), system);
+			if (profile?.font) {
+				term.options.fontFamily = `"${profile.font.family}", ui-monospace, monospace`;
+				term.options.fontSize = profile.font.size;
+			}
+			fit.fit();
+		});
+
+		// A theme change repaints the pane, but only what the app owns. Where
+		// the system profile answered, its colours stay put: someone's terminal
+		// does not turn light because this window did.
 		cleanups.push(
 			watchTheme((dark) => {
-				term.options.theme = terminalTheme(dark);
+				term.options.theme = terminalTheme(dark, system);
 			}),
 		);
 
@@ -101,8 +133,16 @@ export function useTerminalSession(
 
 			// The pty has to be told the new grid or full-screen programs like vim
 			// draw to the wrong dimensions.
+			//
+			// A tab that is not showing is hidden rather than unmounted, so it
+			// measures zero and the fit would tell the shell it has no screen —
+			// which is what reflows a full-screen program into one column and
+			// leaves it that way when the tab comes back. A box with no size is
+			// not a new grid; it is the absence of one, so it is ignored.
 			const observer = new ResizeObserver(() => {
+				if (element.clientWidth === 0 || element.clientHeight === 0) return;
 				fit.fit();
+				if (term.cols === 0 || term.rows === 0) return;
 				void ipc.resizeTerminal(id, term.cols, term.rows);
 			});
 			observer.observe(element);

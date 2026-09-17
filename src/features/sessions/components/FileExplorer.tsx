@@ -4,11 +4,9 @@ import {
 	File as FileIcon,
 	Folder,
 	FolderOpen,
-	Search,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { FileNode, FileStatus } from "../types";
 
@@ -21,14 +19,6 @@ const statusTone: Record<FileStatus, string> = {
 	deleted: "text-destructive line-through",
 };
 
-function collectFiles(nodes: FileNode[], into: string[] = []): string[] {
-	for (const node of nodes) {
-		if (node.kind === "file") into.push(node.path);
-		else collectFiles(node.children, into);
-	}
-	return into;
-}
-
 export function FileExplorer({
 	tree,
 	onOpen,
@@ -37,81 +27,35 @@ export function FileExplorer({
 	onOpen: (path: string) => void;
 }) {
 	const { t } = useTranslation();
-	const [query, setQuery] = useState("");
 	// Folders start closed: a tree that opens itself is a wall of rows, and it
 	// would re-open on every refresh. What the user opened stays open, keyed by
 	// path, across snapshots.
 	const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
 
-	const needle = query.trim().toLowerCase();
-
-	// ponytail: name search only. Content search means `git grep` over IPC;
-	// add it when a name is not enough to find the file.
-	const names = useMemo(
-		() =>
-			needle
-				? collectFiles(tree).filter((path) =>
-						path.toLowerCase().includes(needle),
-					)
-				: [],
-		[tree, needle],
-	);
-
+	// No search box of its own: the panel's one box searches what is written in
+	// these files, and shows this tree while it is empty. A name filter was a
+	// second box answering a question nobody was asking.
 	return (
-		<div className="flex min-h-0 flex-1 flex-col">
-			<div className="relative border-b p-2">
-				<Search className="pointer-events-none absolute top-4.5 left-4 size-3.5 text-muted-foreground" />
-				<Input
-					value={query}
-					onChange={(event) => setQuery(event.target.value)}
-					placeholder={t("session.files.search")}
-					aria-label={t("session.files.search")}
-					className="h-8 bg-background/70 pl-7 text-xs"
+		<div className="flex-1 overflow-auto p-1">
+			{tree.length === 0 ? (
+				<p className="px-2 py-3 text-muted-foreground text-xs">
+					{t("session.files.empty")}
+				</p>
+			) : (
+				<Tree
+					nodes={tree}
+					depth={0}
+					open={open}
+					onToggle={(path) =>
+						setOpen((previous) => {
+							const next = new Set(previous);
+							if (!next.delete(path)) next.add(path);
+							return next;
+						})
+					}
+					onOpen={onOpen}
 				/>
-			</div>
-
-			<div className="flex-1 overflow-auto p-1">
-				{needle ? (
-					names.length === 0 ? (
-						<p className="px-2 py-3 text-muted-foreground text-xs">
-							{t("session.files.noMatch")}
-						</p>
-					) : (
-						<ul>
-							{names.map((path) => (
-								<li key={path}>
-									<button
-										type="button"
-										onClick={() => onOpen(path)}
-										className="flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left text-xs hover:bg-accent/60"
-									>
-										<FileIcon className="size-3.5 shrink-0 text-muted-foreground" />
-										<span className="truncate">{path}</span>
-									</button>
-								</li>
-							))}
-						</ul>
-					)
-				) : tree.length === 0 ? (
-					<p className="px-2 py-3 text-muted-foreground text-xs">
-						{t("session.files.empty")}
-					</p>
-				) : (
-					<Tree
-						nodes={tree}
-						depth={0}
-						open={open}
-						onToggle={(path) =>
-							setOpen((previous) => {
-								const next = new Set(previous);
-								if (!next.delete(path)) next.add(path);
-								return next;
-							})
-						}
-						onOpen={onOpen}
-					/>
-				)}
-			</div>
+			)}
 		</div>
 	);
 }

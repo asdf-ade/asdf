@@ -88,8 +88,6 @@
 			"title": "Cambios"
 		},
 		"files": {
-			"search": "Buscar archivos",
-			"noMatch": "No hay coincidencias.",
 			"pick": "Elige un archivo para leerlo.",
 			"noPreview": "Este archivo no tiene vista previa.",
 			"title": "Archivos",
@@ -98,6 +96,17 @@
 			"byName": "Nombre · {{n}}",
 			"byContent": "Contenido · {{n}}",
 			"loading": "Cargando…"
+		},
+		"search": {
+			"query": "Buscar",
+			"include": "Archivos a incluir",
+			"matchCase": "Coincidir mayúsculas",
+			"wholeWord": "Palabra completa",
+			"regex": "Usar expresión regular",
+			"searching": "Buscando…",
+			"none": "Sin resultados.",
+			"count": "{{matches}} resultados en {{files}} archivos",
+			"cappedCount": "Primeros {{matches}} resultados en {{files}} archivos"
 		},
 		"pane": {
 			"close": "Cerrar ventana",
@@ -113,31 +122,24 @@
 		},
 		"sidePanel": "Panel del proyecto",
 		"newWorkspace": "Nuevo espacio de trabajo",
+		"workspaces": "Espacios de trabajo",
 		"terminalTitle": "Terminal {{n}}",
 		"removeWorkspace": "Quitar espacio de trabajo",
 		"workspace": {
-			"title": "Nuevo espacio de trabajo",
-			"name": "Nombre del espacio de trabajo",
 			"namePlaceholder": "web",
-			"cancel": "Cancelar",
-			"back": "Atrás",
-			"create": "Crear",
-			"clone": "Clonar",
-			"folder": "Carpeta",
+			"menu": "Opciones del espacio de trabajo",
+			"chooseFolder": "Elegir carpeta…",
+			"clearFolder": "Desvincular carpeta",
+			"cloneRepo": "Clonar repositorio…",
+			"cloneTitle": "Clonar repositorio",
+			"url": "URL del repositorio",
+			"urlPlaceholder": "https://github.com/owner/repo.git",
 			"parent": "Clonar en",
 			"noFolder": "Ninguna carpeta elegida",
 			"choose": "Elegir…",
-			"url": "URL del repositorio",
-			"urlPlaceholder": "https://github.com/owner/repo.git",
-			"cloning": "Clonando…",
-			"source": {
-				"empty": "Espacio vacío",
-				"emptyHint": "Empieza libre, sin carpeta.",
-				"folder": "Abrir una carpeta",
-				"folderHint": "Elige una, o crea una nueva en el selector",
-				"clone": "Clonar un repositorio",
-				"cloneHint": "Descárgalo en una carpeta nueva"
-			}
+			"cancel": "Cancelar",
+			"clone": "Clonar",
+			"cloning": "Clonando…"
 		}
 	},
 	"settings": {

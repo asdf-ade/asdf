@@ -29,6 +29,7 @@ import type {
 	ReviewState,
 } from "../types";
 import { FileExplorer } from "./FileExplorer";
+import { SearchPanel } from "./SearchPanel";
 
 type View = "files" | "changes" | "issues" | "pulls";
 
@@ -97,7 +98,7 @@ type Props = {
 	onCommit: (message: string) => Promise<boolean>;
 	/** `dir` is what `path` is relative to: the shell's folder for the tree,
 	 *  the repository root for a change. */
-	onOpenFile: (dir: string, path: string) => void;
+	onOpenFile: (dir: string, path: string, line?: number) => void;
 	onOpenIssue: (number: number) => void;
 	onOpenPull: (number: number) => void;
 };
@@ -175,13 +176,16 @@ export function SidePanel({
 			</nav>
 
 			{/* The folder every view is about, so a `cd` in the shell is visible
-			    here without reading the prompt. */}
+			    here without reading the prompt. Its name, not the route to it: the
+			    route is the part nobody needs, it is the widest thing in a narrow
+			    panel, and on a personal machine it opens with a person's name in
+			    it. The whole path is a hover away for the times it matters. */}
 			{cwd && (
 				<p
 					title={cwd}
 					className="truncate border-b px-3 py-1 font-mono text-[10px] text-muted-foreground"
 				>
-					{cwd}
+					{folderName(cwd)}
 				</p>
 			)}
 
@@ -192,10 +196,15 @@ export function SidePanel({
 			) : !repo ? (
 				<Empty>{t("session.files.loading")}</Empty>
 			) : view === "files" ? (
-				<FileExplorer
-					tree={repo.tree}
-					onOpen={(path) => onOpenFile(repo.cwd, path)}
-				/>
+				<SearchPanel
+					cwd={repo.cwd}
+					onOpen={(path, line) => onOpenFile(repo.cwd, path, line)}
+				>
+					<FileExplorer
+						tree={repo.tree}
+						onOpen={(path) => onOpenFile(repo.cwd, path)}
+					/>
+				</SearchPanel>
 			) : view === "changes" ? (
 				<SourceControl
 					repo={repo}
@@ -250,6 +259,15 @@ export function SidePanel({
 			)}
 		</aside>
 	);
+}
+
+/**
+ * What to call the folder the panel is on: its last segment, whichever
+ * separator the OS writes. The root of a drive has no segment of its own, so
+ * it answers with itself rather than with nothing.
+ */
+function folderName(path: string): string {
+	return path.split(/[/\\]/).filter(Boolean).pop() ?? path;
 }
 
 // Source control the way an editor lays it out: a message box, then the state

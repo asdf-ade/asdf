@@ -9,19 +9,24 @@ import {
 	movePane as moveIn,
 	openPane,
 	type PaneWindow,
-	windowOf,
 } from "./panes";
-import { nextOrdinal, siblingOf, successorOf } from "./roster";
+import { nextOrdinal, successorOf } from "./roster";
 import type { Pane, Project, Session } from "./types";
+
+/** Every tab of a window, across its splits. */
+const panesIn = (window: PaneWindow) =>
+	window.groups.flatMap((group) => group.panes);
 
 /** The browser panes a window holds. */
 const browsersIn = (window: PaneWindow) =>
-	window.groups
-		.flatMap((group) => group.panes)
-		.filter(
-			(pane): pane is Extract<Pane, { kind: "browser" }> =>
-				pane.kind === "browser",
-		);
+	panesIn(window).filter(
+		(pane): pane is Extract<Pane, { kind: "browser" }> =>
+			pane.kind === "browser",
+	);
+
+/** The session a tab answers to, for the tabs that belong to one. */
+const sessionOf = (pane: Pane): string | null =>
+	"sessionId" in pane ? pane.sessionId : null;
 
 // Workspaces outlive the app; sessions do not. So the names are written to
 // storage and everything else starts empty.
@@ -46,15 +51,14 @@ function loadProjects(): Project[] {
 /**
  * The sessions of every workspace, and the one on screen.
  *
- * A session is one window: one agent, one terminal, one working directory, and
- * the files it opened. Splitting a window splits the view of those parts, never
- * the session — a second terminal is a second session, in the same workspace.
- * That is why `windows` is keyed by session and not by workspace: a workspace
- * is not one piece of work, it is the place several pieces of work happen.
+ * A workspace is a window, and everything open in it is a tab in that window's
+ * strip: its terminals, the files they opened, the issues and pulls of the
+ * repository they are in, and the browsers an agent drives. `windows` is keyed
+ * by workspace for that reason — a strip that can only ever hold the one
+ * terminal you are already looking at is not a way to get between things.
  *
- * A browser is the exception. It belongs to the workspace and any of its
- * sessions can show and drive it, because an agent's shell is short-lived and
- * the page it was reading outlasts it.
+ * A session is still one shell with one working directory, numbered within its
+ * workspace. What changed is only where its tab lives.
  */
 export function useSessions() {
 	const [sessions, setSessions] = useState<Session[]>([]);
@@ -81,83 +85,96 @@ export function useSessions() {
 	);
 
 	const window = useMemo(
-		() => windows[activeSessionId] ?? emptyWindow(),
-		[windows, activeSessionId],
+		() => windows[activeProjectId] ?? emptyWindow(),
+		[windows, activeProjectId],
 	);
 	const activeGroup =
 		window.groups.find((group) => group.id === window.active) ??
 		window.groups[0];
 	const activeId = activeGroup.activeId;
 
-	// The browsers of each workspace, gathered from wherever its sessions are
-	// showing them, so the sidebar can list them as the workspace's.
+	// The browsers of each workspace, for the sidebar's list. They live in the
+	// workspace's window like everything else, so this is a read of it.
 	const browsers = useMemo(() => {
 		const byProject: Record<string, Extract<Pane, { kind: "browser" }>[]> = {};
-		for (const session of sessions) {
-			const held = windows[session.id];
-			if (!held) continue;
+		for (const [projectId, held] of Object.entries(windows)) {
 			const found = browsersIn(held);
-			if (found.length === 0) continue;
-			byProject[session.projectId] = [
-				...(byProject[session.projectId] ?? []),
-				...found,
-			];
+			if (found.length > 0) byProject[projectId] = found;
 		}
 		return byProject;
-	}, [sessions, windows]);
+	}, [windows]);
 
-	/** Opens a tab in a session's window, and brings that session to the front. */
+	/** Opens a tab in a workspace's window and brings that workspace to the
+	 *  front. `sessionId` is the session the tab answers to, where it has one. */
 	const openIn = useCallback(
-		(sessionId: string, projectId: string, pane: Pane) => {
+		(projectId: string, pane: Pane, sessionId?: string) => {
 			setActiveProjectId(projectId);
-			setActiveSessionId(sessionId);
+			if (sessionId) setActiveSessionId(sessionId);
 			setWindows((previous) => ({
 				...previous,
-				[sessionId]: openPane(previous[sessionId] ?? emptyWindow(), pane),
+				[projectId]: openPane(previous[projectId] ?? emptyWindow(), pane),
 			}));
 		},
 		[],
 	);
 
 	/**
-	 * A workspace picked from the sidebar shows one of its own sessions, or its
-	 * empty window when it has none. The window is keyed by session, so setting
-	 * the workspace alone left another workspace's terminal on screen while "+"
-	 * made sessions in this one.
+	 * A workspace picked from the sidebar brings its window back as it was left,
+	 * and the panel follows whichever of its terminals the showing tab belongs
+	 * to — falling back to any of them, so a workspace with terminals never
+	 * shows the panel as if it had none.
 	 */
 	const selectProject = useCallback(
 		(projectId: string) => {
 			setActiveProjectId(projectId);
-			if (activeSession?.projectId === projectId) return;
+			const held = windows[projectId];
+			const showing = held
+				? held.groups
+						.flatMap((group) =>
+							group.panes.filter((pane) => pane.id === group.activeId),
+						)
+						.map(sessionOf)
+						.find((id): id is string => id !== null)
+				: undefined;
 			setActiveSessionId(
-				sessions.find((item) => item.projectId === projectId)?.id ?? "",
+				showing ??
+					sessions.find((item) => item.projectId === projectId)?.id ??
+					"",
 			);
 		},
-		[activeSession, sessions],
+		[sessions, windows],
 	);
 
-	/** A session picked from the sidebar comes to the front, as it was left. */
+	/** A session picked from the sidebar brings its tab to the front. */
 	const openSession = useCallback(
 		(sessionId: string) => {
 			const session = sessions.find((item) => item.id === sessionId);
 			if (!session) return;
 			setActiveProjectId(session.projectId);
 			setActiveSessionId(sessionId);
+			setWindows((previous) => {
+				const held = previous[session.projectId];
+				if (!held) return previous;
+				return {
+					...previous,
+					[session.projectId]: focusIn(held, `session:${sessionId}`),
+				};
+			});
 		},
 		[sessions],
 	);
 
 	const openFile = useCallback(
-		(sessionId: string, dir: string, path: string) => {
+		(sessionId: string, dir: string, path: string, line?: number) => {
 			const session = sessions.find((item) => item.id === sessionId);
 			if (!session) return;
-			openIn(sessionId, session.projectId, {
-				kind: "file",
-				id: `file:${dir}/${path}`,
+			// The line is not part of the id: one file is one tab, and opening it
+			// again at another line moves that tab rather than making a second.
+			openIn(
+				session.projectId,
+				{ kind: "file", id: `file:${dir}/${path}`, sessionId, dir, path, line },
 				sessionId,
-				dir,
-				path,
-			});
+			);
 		},
 		[sessions, openIn],
 	);
@@ -165,7 +182,7 @@ export function useSessions() {
 	const openIssue = useCallback(
 		(number: number) => {
 			if (!activeSession) return;
-			openIn(activeSession.id, activeSession.projectId, {
+			openIn(activeSession.projectId, {
 				kind: "issue",
 				id: `issue:${activeSession.projectId}:${number}`,
 				number,
@@ -177,7 +194,7 @@ export function useSessions() {
 	const openPull = useCallback(
 		(number: number) => {
 			if (!activeSession) return;
-			openIn(activeSession.id, activeSession.projectId, {
+			openIn(activeSession.projectId, {
 				kind: "pull",
 				id: `pull:${activeSession.projectId}:${number}`,
 				number,
@@ -186,55 +203,58 @@ export function useSessions() {
 		[activeSession, openIn],
 	);
 
+	/**
+	 * Shows a tab. A tab that belongs to a session also moves the panel onto
+	 * that session, which is what makes the tree and the diff follow the
+	 * terminal you are looking at rather than the one opened last.
+	 */
 	const focusPane = useCallback(
 		(id: string) => {
+			const shown = panesIn(window).find((pane) => pane.id === id);
+			const owner = shown ? sessionOf(shown) : null;
+			if (owner) setActiveSessionId(owner);
 			setWindows((previous) => {
-				const current = previous[activeSessionId];
+				const current = previous[activeProjectId];
 				if (!current) return previous;
-				return { ...previous, [activeSessionId]: focusIn(current, id) };
+				return { ...previous, [activeProjectId]: focusIn(current, id) };
 			});
 		},
-		[activeSessionId],
+		[activeProjectId, window],
 	);
 
 	const focusGroup = useCallback(
 		(id: string) => {
 			setWindows((previous) => {
-				const current = previous[activeSessionId];
+				const current = previous[activeProjectId];
 				if (!current || current.active === id) return previous;
-				return { ...previous, [activeSessionId]: { ...current, active: id } };
+				return { ...previous, [activeProjectId]: { ...current, active: id } };
 			});
 		},
-		[activeSessionId],
+		[activeProjectId],
 	);
 
 	const movePane = useCallback(
 		(id: string, drop: DropTarget) => {
 			setWindows((previous) => {
-				const current = previous[activeSessionId];
+				const current = previous[activeProjectId];
 				if (!current) return previous;
-				return { ...previous, [activeSessionId]: moveIn(current, id, drop) };
+				return { ...previous, [activeProjectId]: moveIn(current, id, drop) };
 			});
 		},
-		[activeSessionId],
+		[activeProjectId],
 	);
 
 	/**
-	 * Ends a session: its terminal, its window and the tabs in it.
-	 *
-	 * Its browsers are the workspace's, so they are handed to another of the
-	 * workspace's sessions rather than closed. When there is no other session
-	 * to hand them to there is nowhere left to show them, and a view nothing
-	 * can place or close is worse than a closed one.
+	 * Ends a session: its shell, its tab, and the file tabs that were opened
+	 * from it — a diff of a folder whose shell is gone has nothing to refresh
+	 * against. The workspace's browsers stay where they are; they never belonged
+	 * to the session.
 	 */
 	const closeSession = useCallback(
 		(sessionId: string) => {
 			const session = sessions.find((item) => item.id === sessionId);
 			if (!session) return;
-			const held = browsersIn(windows[sessionId] ?? emptyWindow());
-			const heir = siblingOf(sessions, sessionId);
-			if (!heir)
-				for (const browser of held) void ipc.browserClose(browser.browserId);
+			const { projectId } = session;
 
 			// Worked out here rather than inside the updater: an updater can be
 			// called more than once for one change, and moving the selection is
@@ -245,69 +265,77 @@ export function useSessions() {
 				if (next) setActiveProjectId(next.projectId);
 			}
 			setSessions(sessions.filter((item) => item.id !== sessionId));
-			setWindows(({ [sessionId]: _gone, ...rest }) => {
-				if (!heir || held.length === 0) return rest;
-				let inherited = rest[heir.id] ?? emptyWindow();
-				for (const browser of held) inherited = openPane(inherited, browser);
-				return { ...rest, [heir.id]: inherited };
+			setWindows((previous) => {
+				const held = previous[projectId];
+				if (!held) return previous;
+				const owned = panesIn(held).filter(
+					(pane) => sessionOf(pane) === sessionId,
+				);
+				return {
+					...previous,
+					[projectId]: owned.reduce(
+						(window, pane) => closeIn(window, pane.id),
+						held,
+					),
+				};
 			});
 		},
-		[sessions, windows, activeSessionId],
+		[sessions, activeSessionId],
 	);
 
 	/**
-	 * Closes one tab. A terminal tab is the session's only terminal, so closing
-	 * it ends the session and the window with it. A browser is a live page and
-	 * closing its tab ends it, which is the one place a workspace's browser is
-	 * deliberately let go. The rest are only views.
+	 * Closes one tab. A terminal tab is a session's only terminal, so closing it
+	 * ends the session and takes its file tabs with it. A browser is a live page
+	 * and closing its tab ends it. The rest are only views.
 	 */
 	const closePane = useCallback(
 		(id: string) => {
-			const pane = window.groups
-				.flatMap((group) => group.panes)
-				.find((item) => item.id === id);
+			const pane = panesIn(window).find((item) => item.id === id);
 			if (pane?.kind === "session") {
 				closeSession(pane.sessionId);
 				return;
 			}
 			if (pane?.kind === "browser") void ipc.browserClose(pane.browserId);
 			setWindows((previous) => {
-				const current = previous[activeSessionId];
+				const current = previous[activeProjectId];
 				if (!current) return previous;
-				return { ...previous, [activeSessionId]: closeIn(current, id) };
+				return { ...previous, [activeProjectId]: closeIn(current, id) };
 			});
 		},
-		[activeSessionId, window, closeSession],
+		[activeProjectId, window, closeSession],
 	);
 
-	/**
-	 * Shows a workspace's browser in the session on screen, taking it out of
-	 * whichever session was showing it. One view, one place: it is a live page,
-	 * not a picture of one, so it cannot be in two windows at once.
-	 */
+	/** Brings a workspace's browser to the front of its window. */
 	const openBrowser = useCallback(
 		(projectId: string, browserId: number) => {
-			const pane: Pane = {
+			openIn(projectId, {
 				kind: "browser",
 				id: `browser:${browserId}`,
 				browserId,
-			};
-			const target =
-				activeSession?.projectId === projectId
-					? activeSession
-					: sessions.find((item) => item.projectId === projectId);
-			if (!target) return;
-			setActiveProjectId(projectId);
-			setActiveSessionId(target.id);
-			setWindows((previous) => {
-				const next: Record<string, PaneWindow> = {};
-				for (const [id, held] of Object.entries(previous))
-					next[id] = id === target.id ? held : closeIn(held, pane.id);
-				next[target.id] = openPane(next[target.id] ?? emptyWindow(), pane);
-				return next;
 			});
 		},
-		[activeSession, sessions],
+		[openIn],
+	);
+
+	/**
+	 * Makes a session and the terminal it is, under a number already worked out.
+	 *
+	 * Split from `createSession` so a workspace can open with its first terminal
+	 * without consulting the roster: a workspace being made has no sessions to
+	 * count, so its first is always number one, and the roster it would ask is
+	 * the state this same render is about to replace.
+	 */
+	const startSession = useCallback(
+		(projectId: string, ordinal: number) => {
+			const id = `s${Date.now()}`;
+			setSessions((previous) => [{ id, ordinal, projectId }, ...previous]);
+			openIn(
+				projectId,
+				{ kind: "session", id: `session:${id}`, sessionId: id },
+				id,
+			);
+		},
+		[openIn],
 	);
 
 	/**
@@ -318,29 +346,38 @@ export function useSessions() {
 	 * next one and put two of the same name in the sidebar.
 	 */
 	const createSession = useCallback(
-		(projectId: string) => {
-			const id = `s${Date.now()}`;
-			const ordinal = nextOrdinal(sessions, projectId);
-			setSessions((previous) => [{ id, ordinal, projectId }, ...previous]);
-			setActiveProjectId(projectId);
-			setActiveSessionId(id);
-			setWindows((previous) => ({
-				...previous,
-				[id]: windowOf({ kind: "session", id: `session:${id}`, sessionId: id }),
-			}));
-		},
-		[sessions],
+		(projectId: string) =>
+			startSession(projectId, nextOrdinal(sessions, projectId)),
+		[sessions, startSession],
 	);
 
-	// A workspace is a name and the folder its sessions open in. It opens
-	// empty, on the same "+" every session shows, so making one does not
-	// decide what goes in it.
+	// A workspace is a name and the folder its sessions open in, and it opens
+	// with a terminal already in it. Nobody makes a workspace in order to look
+	// at an empty one: the next click was always "+", and the empty window that
+	// stood in between said only that there was one more step to go.
 	const createWorkspace = useCallback(
 		(name: string, path: string | null = null) => {
 			const id = `p${Date.now()}`;
 			setProjects((previous) => [...previous, { id, name, path }]);
-			setActiveProjectId(id);
-			setActiveSessionId("");
+			startSession(id, 1);
+		},
+		[startSession],
+	);
+
+	/**
+	 * Gives a workspace its folder, or takes it away.
+	 *
+	 * Only terminals opened after this start there: a shell's working directory
+	 * is the shell's, and moving a running one out from under whoever is typing
+	 * in it is not something a menu should be able to do.
+	 */
+	const setWorkspacePath = useCallback(
+		(projectId: string, path: string | null) => {
+			setProjects((previous) =>
+				previous.map((project) =>
+					project.id === projectId ? { ...project, path } : project,
+				),
+			);
 		},
 		[],
 	);
@@ -348,10 +385,8 @@ export function useSessions() {
 	// Forgetting a workspace ends its sessions and the browsers it owned.
 	const removeWorkspace = useCallback(
 		(projectId: string) => {
-			const own = sessions.filter((item) => item.projectId === projectId);
-			for (const session of own)
-				for (const browser of browsersIn(windows[session.id] ?? emptyWindow()))
-					void ipc.browserClose(browser.browserId);
+			for (const browser of browsersIn(windows[projectId] ?? emptyWindow()))
+				void ipc.browserClose(browser.browserId);
 			// Worked out here rather than inside an updater, for the same reason as
 			// in `closeSession`. When the workspace on screen goes, the next one
 			// comes up showing one of its own sessions: moving the workspace without
@@ -363,27 +398,21 @@ export function useSessions() {
 				setActiveSessionId(
 					sessions.find((item) => item.projectId === next?.id)?.id ?? "",
 				);
-			} else if (own.some((session) => session.id === activeSessionId)) {
-				setActiveSessionId("");
 			}
 			setProjects(left);
 			setSessions((previous) =>
 				previous.filter((session) => session.projectId !== projectId),
 			);
-			setWindows((previous) => {
-				const next = { ...previous };
-				for (const session of own) delete next[session.id];
-				return next;
-			});
+			setWindows(({ [projectId]: _gone, ...rest }) => rest);
 		},
-		[activeProjectId, activeSessionId, projects, sessions, windows],
+		[activeProjectId, projects, sessions, windows],
 	);
 
 	return {
 		sessions,
 		projects,
-		/** Every open tab of the session on screen, across its groups. */
-		panes: window.groups.flatMap((group) => group.panes),
+		/** Every open tab of the workspace on screen, across its groups. */
+		panes: panesIn(window),
 		paneGroups: window.groups,
 		/** How the groups are arranged, and their order on screen. */
 		layout: window.layout,
@@ -409,6 +438,7 @@ export function useSessions() {
 		closePane,
 		closeSession,
 		createWorkspace,
+		setWorkspacePath,
 		removeWorkspace,
 		createSession,
 	};
