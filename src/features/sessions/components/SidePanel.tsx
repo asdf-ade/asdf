@@ -136,7 +136,7 @@ export function SidePanel({
 	};
 
 	return (
-		<aside className="flex min-w-0 flex-1 flex-col bg-muted/30">
+		<aside className="flex min-h-0 min-w-0 flex-1 flex-col bg-muted/30">
 			{/* One view at a time. Stacking them would leave every list too short to
 			    read and the tree squeezed to nothing. */}
 			<nav
@@ -174,20 +174,6 @@ export function SidePanel({
 					);
 				})}
 			</nav>
-
-			{/* The folder every view is about, so a `cd` in the shell is visible
-			    here without reading the prompt. Its name, not the route to it: the
-			    route is the part nobody needs, it is the widest thing in a narrow
-			    panel, and on a personal machine it opens with a person's name in
-			    it. The whole path is a hover away for the times it matters. */}
-			{cwd && (
-				<p
-					title={cwd}
-					className="truncate border-b px-3 py-1 font-mono text-[10px] text-muted-foreground"
-				>
-					{folderName(cwd)}
-				</p>
-			)}
 
 			{!cwd ? (
 				<Empty>{t("session.files.noSession")}</Empty>
@@ -259,15 +245,6 @@ export function SidePanel({
 			)}
 		</aside>
 	);
-}
-
-/**
- * What to call the folder the panel is on: its last segment, whichever
- * separator the OS writes. The root of a drive has no segment of its own, so
- * it answers with itself rather than with nothing.
- */
-function folderName(path: string): string {
-	return path.split(/[/\\]/).filter(Boolean).pop() ?? path;
 }
 
 // Source control the way an editor lays it out: a message box, then the state

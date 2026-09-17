@@ -326,7 +326,7 @@ export function App() {
 				{sidebarOpen && (
 					<div
 						style={{ width: sidebarWidth }}
-						className="flex shrink-0 flex-col bg-muted/30"
+						className="flex min-h-0 shrink-0 flex-col bg-muted/30"
 					>
 						{/* Top row of the window. On macOS the traffic lights sit in its
 						    left end, so the name starts past them. */}
@@ -491,9 +491,13 @@ export function App() {
 
 				{panelOpen && <ResizeHandle onPointerDown={resizePanel} />}
 				{panelOpen && (
+					// `min-h-0`, or the column takes its height from its content:
+					// a long file tree grows past the window instead of scrolling
+					// inside it, which is both why the panel had no scrollbar and
+					// why its rows showed through the status bar.
 					<div
 						style={{ width: panelWidth }}
-						className="flex shrink-0 flex-col bg-muted/30"
+						className="flex min-h-0 shrink-0 flex-col bg-muted/30"
 					>
 						{/* Where the OS draws no caption buttons of its own, the window's
 						    top right corner belongs to ours, and the panel starts a row
@@ -524,7 +528,12 @@ export function App() {
 				)}
 			</div>
 
-			<footer className="flex h-6 shrink-0 items-center gap-3 border-t bg-muted/30 px-3 text-[10px] text-muted-foreground">
+			{/* Opaque, and above what it sits on. `bg-muted/30` is what the sidebar
+			    and the panel are, and this is the same colour already mixed down
+			    onto the background rather than laid over whatever happens to be
+			    behind — a status bar with the file tree showing through it is not
+			    a status bar. */}
+			<footer className="relative z-10 flex h-6 shrink-0 items-center gap-3 border-t bg-[color-mix(in_oklab,var(--muted)_30%,var(--background))] px-3 text-[10px] text-muted-foreground">
 				{active && (
 					<>
 						<span className="truncate">{sessions.activeProject?.name}</span>

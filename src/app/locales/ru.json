@@ -106,7 +106,8 @@
 			"searching": "Идёт поиск…",
 			"none": "Ничего не найдено.",
 			"count": "{{matches}} совпадений в {{files}} файлах",
-			"cappedCount": "Первые {{matches}} совпадений в {{files}} файлах"
+			"cappedCount": "Первые {{matches}} совпадений в {{files}} файлах",
+			"toggleGlobs": "Показать параметры поиска"
 		},
 		"pane": {
 			"close": "Закрыть окно",

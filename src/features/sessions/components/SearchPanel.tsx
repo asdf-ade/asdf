@@ -7,6 +7,7 @@ import {
 	Search,
 	WholeWord,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
@@ -43,7 +44,7 @@ export function SearchPanel({
 	onOpen: (path: string, line: number) => void;
 	/** What the panel shows while the box is empty — the file tree. One box,
 	 *  and the thing under it answers to what is in it. */
-	children: React.ReactNode;
+	children: ReactNode;
 }) {
 	const { t } = useTranslation();
 	const [query, setQuery] = useState("");
@@ -54,6 +55,10 @@ export function SearchPanel({
 		include: "",
 	});
 	const [state, setState] = useState<State>({ status: "idle" });
+	// The globs are folded away until asked for, the way an editor folds them:
+	// most searches are the whole folder, and a second field standing open above
+	// every result is a field in the way.
+	const [showGlobs, setShowGlobs] = useState(false);
 	const [folded, setFolded] = useState<ReadonlySet<string>>(new Set());
 	// Which search the answers on screen belong to. A slow one that finishes
 	// after a later one must not overwrite it, and there is no cancelling a
@@ -98,52 +103,81 @@ export function SearchPanel({
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
-			<div className="flex flex-col gap-1.5 border-b p-2">
-				<div className="relative">
-					<Search className="pointer-events-none absolute top-2.5 left-2 size-3.5 text-muted-foreground" />
-					<Input
-						value={query}
-						onChange={(event) => setQuery(event.target.value)}
-						placeholder={t("session.search.query")}
-						aria-label={t("session.search.query")}
-						className="h-8 bg-background/70 pr-20 pl-7 text-xs"
-					/>
-					{/* Inside the field, as an editor puts them: they change how what
-					    is in the field is read, so they belong to it. */}
-					<div className="absolute top-1.5 right-1 flex gap-0.5">
-						<Toggle
-							icon={CaseSensitive}
-							on={options.matchCase}
-							label={t("session.search.matchCase")}
-							onClick={() => toggle("matchCase")}
-						/>
-						<Toggle
-							icon={WholeWord}
-							on={options.wholeWord}
-							label={t("session.search.wholeWord")}
-							onClick={() => toggle("wholeWord")}
-						/>
-						<Toggle
-							icon={Regex}
-							on={options.regex}
-							label={t("session.search.regex")}
-							onClick={() => toggle("regex")}
-						/>
-					</div>
-				</div>
+			<div className="flex gap-1 border-b p-2">
+				{/* The fold sits beside the query, not above the globs: it belongs to
+				    the search as a whole, and putting it there is what keeps the two
+				    fields on one axis when they are both open. */}
+				<button
+					type="button"
+					aria-expanded={showGlobs}
+					aria-label={t("session.search.toggleGlobs")}
+					title={t("session.search.toggleGlobs")}
+					onClick={() => setShowGlobs((previous) => !previous)}
+					className={cn(
+						"mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-accent/60",
+						// A glob that is narrowing the search while folded away has to
+						// say so, or the results are short for no reason anyone can see.
+						options.include.trim()
+							? "text-foreground"
+							: "text-muted-foreground",
+					)}
+				>
+					{showGlobs ? (
+						<ChevronDown className="size-3.5" />
+					) : (
+						<ChevronRight className="size-3.5" />
+					)}
+				</button>
 
-				<Input
-					value={options.include}
-					onChange={(event) =>
-						setOptions((previous) => ({
-							...previous,
-							include: event.target.value,
-						}))
-					}
-					placeholder={t("session.search.include")}
-					aria-label={t("session.search.include")}
-					className="h-7 bg-background/70 text-xs"
-				/>
+				<div className="flex min-w-0 flex-1 flex-col gap-1.5">
+					<div className="relative">
+						<Search className="pointer-events-none absolute top-2.5 left-2 size-3.5 text-muted-foreground" />
+						<Input
+							value={query}
+							onChange={(event) => setQuery(event.target.value)}
+							placeholder={t("session.search.query")}
+							aria-label={t("session.search.query")}
+							className="h-8 bg-background/70 pr-20 pl-7 text-xs"
+						/>
+						{/* Inside the field, as an editor puts them: they change how what
+					    is in the field is read, so they belong to it. */}
+						<div className="absolute top-1.5 right-1 flex gap-0.5">
+							<Toggle
+								icon={CaseSensitive}
+								on={options.matchCase}
+								label={t("session.search.matchCase")}
+								onClick={() => toggle("matchCase")}
+							/>
+							<Toggle
+								icon={WholeWord}
+								on={options.wholeWord}
+								label={t("session.search.wholeWord")}
+								onClick={() => toggle("wholeWord")}
+							/>
+							<Toggle
+								icon={Regex}
+								on={options.regex}
+								label={t("session.search.regex")}
+								onClick={() => toggle("regex")}
+							/>
+						</div>
+					</div>
+
+					{showGlobs && (
+						<Input
+							value={options.include}
+							onChange={(event) =>
+								setOptions((previous) => ({
+									...previous,
+									include: event.target.value,
+								}))
+							}
+							placeholder={t("session.search.include")}
+							aria-label={t("session.search.include")}
+							className="h-7 bg-background/70 text-xs"
+						/>
+					)}
+				</div>
 			</div>
 
 			{summary && (
@@ -299,7 +333,7 @@ function Toggle({
 	);
 }
 
-function Note({ children }: { children: React.ReactNode }) {
+function Note({ children }: { children: ReactNode }) {
 	return <p className="px-2 py-3 text-muted-foreground text-xs">{children}</p>;
 }
 

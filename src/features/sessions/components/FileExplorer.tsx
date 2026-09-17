@@ -36,7 +36,7 @@ export function FileExplorer({
 	// these files, and shows this tree while it is empty. A name filter was a
 	// second box answering a question nobody was asking.
 	return (
-		<div className="flex-1 overflow-auto p-1">
+		<div className="min-h-0 flex-1 overflow-auto p-1">
 			{tree.length === 0 ? (
 				<p className="px-2 py-3 text-muted-foreground text-xs">
 					{t("session.files.empty")}
