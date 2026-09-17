@@ -453,7 +453,10 @@ function Tab({
 				onDropAt(event, nearHalf(event));
 			}}
 			className={cn(
-				"@container relative flex min-w-8 max-w-52 flex-1 basis-0 items-center gap-1 border-r pr-2 pl-2.5",
+				// No padding of its own: every pixel of a tab that is not its close
+				// button belongs to the button that selects it. Padding on the strip
+				// looked like part of the tab and did nothing when pressed.
+				"@container relative flex min-w-8 max-w-52 flex-1 basis-0 items-stretch border-r",
 				active
 					? "bg-background after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-background"
 					: "text-muted-foreground hover:bg-background/50 hover:text-foreground",
@@ -462,23 +465,29 @@ function Tab({
 				active && !focused && "text-muted-foreground",
 			)}
 		>
+			{/* Full bleed: the whole height, and every pixel out to the close
+			    button. `items-stretch` on the strip is what gives it the height. */}
 			<button
 				type="button"
 				onClick={onFocus}
-				className="flex min-w-0 flex-1 items-center gap-1.5 text-[11px]"
+				className="flex min-w-0 flex-1 items-center gap-1.5 pr-1 pl-2.5 text-[11px]"
 			>
 				{Icon && <Icon className="size-3.5 shrink-0" />}
 				<span className="truncate">{label}</span>
 			</button>
 			{/* Squeezed inactive tabs give the space to their name; the active
 			    tab keeps its close button, as the one you are most likely to
-			    close. */}
+			    close. Its own right padding rather than the tab's, so the strip
+			    past it is not a dead corner of the tab. */}
 			<Button
 				size="icon"
 				variant="ghost"
 				aria-label={t("session.pane.close")}
 				onClick={onClose}
-				className={cn("size-5 shrink-0", !active && "hidden @[5rem]:flex")}
+				className={cn(
+					"my-auto mr-2 size-5 shrink-0",
+					!active && "hidden @[5rem]:flex",
+				)}
 			>
 				<X className="size-3" />
 			</Button>
