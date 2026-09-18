@@ -302,18 +302,26 @@ export function SessionSidebar({
 function StatusMark({ status }: { status: SessionStatus | undefined }) {
 	const { t } = useTranslation();
 	const state = status ?? "idle";
-	const Icon =
-		state === "busy" ? LoaderCircle : state === "done" ? BellDot : Circle;
+	const label = t(`session.status.${state}`);
+	// One slot the width of the icon a browser row shows, so the names line up
+	// whatever is in it. The quiet state is a dot rather than a ring: it is the
+	// one every row wears most of the time, and it should sit under the name
+	// rather than compete with it.
 	return (
-		<Icon
-			aria-label={t(`session.status.${state}`)}
-			className={cn(
-				"size-3.5 shrink-0",
-				state === "busy" && "animate-spin",
-				state === "done" && "text-amber-500",
-				state === "idle" && "fill-emerald-500 text-emerald-500",
+		<span
+			role="img"
+			aria-label={label}
+			title={label}
+			className="flex size-3.5 shrink-0 items-center justify-center"
+		>
+			{state === "busy" ? (
+				<LoaderCircle className="size-3.5 animate-spin" />
+			) : state === "done" ? (
+				<BellDot className="size-3.5 text-amber-500" />
+			) : (
+				<Circle className="size-2 fill-emerald-500 text-emerald-500" />
 			)}
-		/>
+		</span>
 	);
 }
 

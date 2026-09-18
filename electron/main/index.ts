@@ -39,6 +39,11 @@ const terminals = new Registry();
 /** How long a shell must be quiet before its work counts as finished. */
 const QUIET_MS = 1000;
 
+/** How long after a start or a resize a shell's output is not counted as work:
+ *  long enough for the prompt or the repaint, short enough that a command typed
+ *  straight away still shows. */
+const SETTLE_MS = 500;
+
 /** Whether the person asked the machine to stay awake while agents work. */
 let keepAwake = false;
 /** The id of the block being held, or null while the machine may sleep. */
@@ -274,8 +279,8 @@ ipcMain.handle(
 	(
 		_event,
 		{ cwd, cols, rows }: { cwd: string | null; cols: number; rows: number },
-	) =>
-		terminals.open(cwd, cols, rows, {
+	) => {
+		const opened = terminals.open(cwd, cols, rows, {
 			onOutput: (id, chunk) => {
 				activity.saw(id);
 				main?.webContents.send(TERMINAL_OUTPUT_EVENT, { id, chunk });
@@ -285,7 +290,11 @@ ipcMain.handle(
 				holdSleep();
 				main?.webContents.send(TERMINAL_EXIT_EVENT, id);
 			},
-		}),
+		});
+		// A shell greets you as it starts. That is not work.
+		if (opened.ok) activity.mute(opened.value, SETTLE_MS);
+		return opened;
+	},
 );
 
 ipcMain.handle(
@@ -296,8 +305,13 @@ ipcMain.handle(
 
 ipcMain.handle(
 	"resize_terminal",
-	(_event, { id, cols, rows }: { id: number; cols: number; rows: number }) =>
-		terminals.resize(id, cols, rows),
+	(_event, { id, cols, rows }: { id: number; cols: number; rows: number }) => {
+		// A resize makes the shell repaint, and a session coming on screen is
+		// sized exactly then — so switching sessions would spin the sidebar for
+		// the session you just left behind and the one you just arrived at.
+		activity.mute(id, SETTLE_MS);
+		return terminals.resize(id, cols, rows);
+	},
 );
 
 ipcMain.handle("close_terminal", (_event, { id }: { id: number }) => {

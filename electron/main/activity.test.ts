@@ -61,6 +61,34 @@ describe("Activity", () => {
 		expect(activity.working).toBe(1);
 	});
 
+	// Opening a shell prints a prompt and resizing makes it repaint. Neither is
+	// work, and both would otherwise spin the sidebar over nothing — a resize
+	// happens every time a session comes on screen.
+	it("says nothing about output while a session is muted", () => {
+		const { activity, changes } = watch();
+		activity.mute(1, 500);
+		activity.saw(1);
+		activity.saw(1);
+		expect(changes).toEqual([]);
+		expect(activity.working).toBe(0);
+	});
+
+	it("counts output again once the mute has run out", () => {
+		const { activity, changes } = watch();
+		activity.mute(1, 500);
+		vi.advanceTimersByTime(500);
+		activity.saw(1);
+		expect(changes).toEqual(["1:true"]);
+	});
+
+	it("muting one session leaves the others alone", () => {
+		const { activity, changes } = watch();
+		activity.mute(1, 500);
+		activity.saw(1);
+		activity.saw(2);
+		expect(changes).toEqual(["2:true"]);
+	});
+
 	// A closed session has no state left to report, and an alert mark on a row
 	// that is gone is worse than no mark at all.
 	it("forgetting a session reports nothing and stops its timer", () => {
