@@ -202,13 +202,19 @@ export function App() {
 	// Which pty sits behind each terminal tab, so the panel can ask the OS
 	// where that shell is. The tab on screen decides what the panel shows.
 	const [ptys, setPtys] = useState<Record<string, number>>({});
+	// The pane reports this from an effect that re-runs on every render, so an
+	// answer that has not changed must hand back the same object: a fresh one
+	// re-renders, which runs the effect, which reports again — a loop that spins
+	// a core and ends the renderer in out-of-memory.
 	const bindPty = useCallback(
 		(sessionId: string, id: number | null) =>
 			setPtys((previous) => {
 				if (id === null) {
+					if (!(sessionId in previous)) return previous;
 					const { [sessionId]: _gone, ...rest } = previous;
 					return rest;
 				}
+				if (previous[sessionId] === id) return previous;
 				return { ...previous, [sessionId]: id };
 			}),
 		[],
