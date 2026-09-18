@@ -141,6 +141,14 @@
 			"cancel": "Cancel",
 			"clone": "Clone",
 			"cloning": "Cloning…"
+		},
+		"status": {
+			"idle": "Finished",
+			"busy": "Working",
+			"done": "Finished, not opened yet"
+		},
+		"notify": {
+			"finished": "Work finished."
 		}
 	},
 	"settings": {
@@ -155,9 +163,12 @@
 		"language": "Language",
 		"sections": {
 			"appearance": "Appearance",
-			"language": "Language"
+			"language": "Language",
+			"power": "Power"
 		},
-		"back": "Back"
+		"back": "Back",
+		"keepAwake": "Keep the machine awake while an agent is working",
+		"keepAwakeHint": "The machine will not sleep while any session is working."
 	},
 	"github": {
 		"issues": "Issues",

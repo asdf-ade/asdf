@@ -141,6 +141,14 @@
 			"cancel": "취소",
 			"clone": "복제",
 			"cloning": "복제 중…"
+		},
+		"status": {
+			"idle": "끝남",
+			"busy": "작업 중",
+			"done": "끝남 · 아직 열지 않음"
+		},
+		"notify": {
+			"finished": "작업이 끝났습니다."
 		}
 	},
 	"settings": {
@@ -155,9 +163,12 @@
 		"language": "언어",
 		"sections": {
 			"appearance": "모양",
-			"language": "언어"
+			"language": "언어",
+			"power": "전원"
 		},
-		"back": "뒤로"
+		"back": "뒤로",
+		"keepAwake": "에이전트가 작업하는 동안 절전 막기",
+		"keepAwakeHint": "작업 중인 세션이 있으면 컴퓨터가 잠자기로 들어가지 않습니다."
 	},
 	"github": {
 		"issues": "이슈",

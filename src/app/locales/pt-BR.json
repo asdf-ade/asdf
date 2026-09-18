@@ -141,6 +141,14 @@
 			"cancel": "Cancelar",
 			"clone": "Clonar",
 			"cloning": "Clonando…"
+		},
+		"status": {
+			"idle": "Concluído",
+			"busy": "Trabalhando",
+			"done": "Concluído, ainda não aberto"
+		},
+		"notify": {
+			"finished": "O trabalho terminou."
 		}
 	},
 	"settings": {
@@ -155,9 +163,12 @@
 		"language": "Idioma",
 		"sections": {
 			"appearance": "Aparência",
-			"language": "Idioma"
+			"language": "Idioma",
+			"power": "Energia"
 		},
-		"back": "Voltar"
+		"back": "Voltar",
+		"keepAwake": "Manter a máquina acordada enquanto um agente trabalha",
+		"keepAwakeHint": "A máquina não dormirá enquanto alguma sessão estiver trabalhando."
 	},
 	"github": {
 		"issues": "Issues",

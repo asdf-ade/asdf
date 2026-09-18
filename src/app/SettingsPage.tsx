@@ -8,9 +8,9 @@ import { cn } from "@/lib/utils";
 export type Theme = "system" | "light" | "dark";
 
 /** A part of settings, and what a link into settings points at. */
-export type SettingsSection = "appearance" | "language";
+export type SettingsSection = "appearance" | "language" | "power";
 
-const SECTIONS: SettingsSection[] = ["appearance", "language"];
+const SECTIONS: SettingsSection[] = ["appearance", "language", "power"];
 
 const THEMES: Theme[] = ["system", "light", "dark"];
 
@@ -104,11 +104,15 @@ export function SettingsBody({
 	section,
 	theme,
 	onTheme,
+	keepAwake,
+	onKeepAwake,
 	trailing,
 }: {
 	section: SettingsSection;
 	theme: Theme;
 	onTheme: (theme: Theme) => void;
+	keepAwake: boolean;
+	onKeepAwake: (enabled: boolean) => void;
 	/** The window's caption buttons, where the OS draws none of its own. With
 	 *  the panel and the tab strips gone, this row is the window's top right. */
 	trailing?: ReactNode;
@@ -155,7 +159,7 @@ export function SettingsBody({
 								))}
 							</div>
 						</fieldset>
-					) : (
+					) : section === "language" ? (
 						<fieldset className="flex flex-col gap-1.5">
 							<legend className="font-medium text-xs">
 								{t("settings.language")}
@@ -178,6 +182,37 @@ export function SettingsBody({
 									</button>
 								))}
 							</div>
+						</fieldset>
+					) : (
+						<fieldset className="flex flex-col gap-1.5">
+							<legend className="font-medium text-xs">
+								{t("settings.sections.power")}
+							</legend>
+							{/* A checkbox in all but name: there is no switch in the
+							    component set, and the theme picker next door is built the
+							    same way. */}
+							<button
+								type="button"
+								aria-pressed={keepAwake}
+								onClick={() => onKeepAwake(!keepAwake)}
+								className={cn(
+									"flex items-start gap-2 rounded-md border px-3 py-2 text-left transition-colors",
+									keepAwake ? "border-foreground" : "hover:bg-muted",
+								)}
+							>
+								<span
+									className={cn(
+										"mt-px size-3.5 shrink-0 rounded-sm border",
+										keepAwake && "border-foreground bg-foreground",
+									)}
+								/>
+								<span className="flex min-w-0 flex-col gap-0.5">
+									<span className="text-xs">{t("settings.keepAwake")}</span>
+									<span className="text-[11px] text-muted-foreground">
+										{t("settings.keepAwakeHint")}
+									</span>
+								</span>
+							</button>
 						</fieldset>
 					)}
 				</div>
