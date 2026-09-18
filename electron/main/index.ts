@@ -125,6 +125,24 @@ function createWindow(): BrowserWindow {
 	// whatever bounds it last had. The reload is the end of those panes.
 	window.webContents.on("did-start-loading", () => browsers.closeAll());
 
+	// A window that has gone blank looks the same from outside whatever caused
+	// it: a renderer that died, one that hung, or a page that tried to load and
+	// could not — which in development is the dev server having gone away. Each
+	// says so here, because none of them says anything on its own.
+	window.webContents.on("render-process-gone", (_event, details) => {
+		console.error(
+			`renderer gone: ${details.reason} (exit code ${details.exitCode})`,
+		);
+	});
+	window.on("unresponsive", () => console.error("renderer is not responding"));
+	window.webContents.on(
+		"did-fail-load",
+		(_event, code, description, url, isMainFrame) => {
+			if (isMainFrame)
+				console.error(`load failed: ${description} (${code}) ${url}`);
+		},
+	);
+
 	window.on("close", (event) => {
 		if (closing) return;
 		event.preventDefault();
