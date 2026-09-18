@@ -1,5 +1,5 @@
 import {
-	BellDot,
+	Bell,
 	ChevronDown,
 	ChevronRight,
 	Circle,
@@ -317,7 +317,7 @@ function StatusMark({ status }: { status: SessionStatus | undefined }) {
 			{state === "busy" ? (
 				<LoaderCircle className="size-3.5 animate-spin" />
 			) : state === "done" ? (
-				<BellDot className="size-3.5 text-amber-500" />
+				<Bell className="size-3.5 text-amber-500" />
 			) : (
 				<Circle className="size-2 fill-emerald-500 text-emerald-500" />
 			)}
