@@ -153,6 +153,10 @@
 			"dark": "ダーク"
 		},
 		"language": "言語",
+		"sections": {
+			"appearance": "外観",
+			"language": "言語"
+		},
 		"close": "閉じる"
 	},
 	"github": {

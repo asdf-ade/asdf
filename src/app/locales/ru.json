@@ -153,6 +153,10 @@
 			"dark": "Тёмная"
 		},
 		"language": "Язык",
+		"sections": {
+			"appearance": "Внешний вид",
+			"language": "Язык"
+		},
 		"close": "Закрыть"
 	},
 	"github": {

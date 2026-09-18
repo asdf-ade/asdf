@@ -153,6 +153,10 @@
 			"dark": "深色"
 		},
 		"language": "语言",
+		"sections": {
+			"appearance": "外观",
+			"language": "语言"
+		},
 		"close": "关闭"
 	},
 	"github": {

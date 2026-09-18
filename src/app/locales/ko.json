@@ -153,6 +153,10 @@
 			"dark": "어둡게"
 		},
 		"language": "언어",
+		"sections": {
+			"appearance": "모양",
+			"language": "언어"
+		},
 		"close": "닫기"
 	},
 	"github": {

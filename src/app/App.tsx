@@ -28,7 +28,7 @@ import { platform } from "@/ipc/platform";
 import { cn } from "@/lib/utils";
 import { CloneRepoDialog } from "./CloneRepoDialog";
 import { NewTabDialog, type TabKind } from "./NewTabDialog";
-import { SettingsDialog, type Theme } from "./SettingsDialog";
+import { SettingsPage, type SettingsSection, type Theme } from "./SettingsPage";
 import { useResizable } from "./use-resizable";
 
 /**
@@ -176,7 +176,10 @@ export function App() {
 	const { t } = useTranslation();
 	const updater = useUpdater();
 	const sessions = useSessions();
-	const [settingsOpen, setSettingsOpen] = useState(false);
+	// Which part of settings is open, and null when the panes are. Settings is
+	// a place in the window now, so it is entered at a section rather than
+	// simply switched on.
+	const [settings, setSettings] = useState<SettingsSection | null>(null);
 	const [theme, setTheme] = useState<Theme>("system");
 	// The sidebar's name field: what is in it, and null when it is closed. Held
 	// here because the empty window's buttons open it too.
@@ -217,11 +220,7 @@ export function App() {
 	// true of a tab in the air, whose drop zones are DOM underneath. Both are
 	// answered by putting the views away until the thing on top is done with.
 	const overlay =
-		dragging ||
-		cloningInto !== null ||
-		settingsOpen ||
-		updater.open ||
-		newTabIn !== null;
+		dragging || cloningInto !== null || updater.open || newTabIn !== null;
 	useEffect(() => {
 		void ipc.browserCover(overlay);
 	}, [overlay]);
@@ -366,7 +365,7 @@ export function App() {
 							<Button
 								variant="ghost"
 								size="sm"
-								onClick={() => setSettingsOpen(true)}
+								onClick={() => setSettings("appearance")}
 								className="h-7 w-full justify-start gap-2 px-2 text-muted-foreground text-xs"
 							>
 								<Settings className="size-3.5" />
@@ -379,8 +378,14 @@ export function App() {
 
 				{/* One PaneArea per leaf of the layout tree. The panel toggles and
 				    caption buttons belong to the window, so only the first and last
-				    strips on screen carry them. */}
-				<div className="flex min-w-0 flex-1">
+				    strips on screen carry them.
+
+				    Hidden rather than unmounted while settings is open: a terminal
+				    pane closes its pty when it goes, so unmounting the panes to show
+				    a page would end every shell in the window. Hiding also takes the
+				    browser views with it, since a pane with no size asks to be put
+				    away. */}
+				<div className={cn("flex min-w-0 flex-1", settings && "hidden")}>
 					<LayoutView
 						layout={sessions.layout}
 						render={(groupId) => {
@@ -489,6 +494,16 @@ export function App() {
 					/>
 				</div>
 
+				{settings && (
+					<SettingsPage
+						section={settings}
+						onSection={setSettings}
+						onClose={() => setSettings(null)}
+						theme={theme}
+						onTheme={setTheme}
+					/>
+				)}
+
 				{panelOpen && <ResizeHandle onPointerDown={resizePanel} />}
 				{panelOpen && (
 					// `min-h-0`, or the column takes its height from its content:
@@ -579,13 +594,6 @@ export function App() {
 				open={newTabIn !== null}
 				onOpenChange={(open) => !open && setNewTabIn(null)}
 				onPick={openTab}
-			/>
-
-			<SettingsDialog
-				open={settingsOpen}
-				onOpenChange={setSettingsOpen}
-				theme={theme}
-				onTheme={setTheme}
 			/>
 
 			<UpdateDialog

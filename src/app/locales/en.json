@@ -153,6 +153,10 @@
 			"dark": "Dark"
 		},
 		"language": "Language",
+		"sections": {
+			"appearance": "Appearance",
+			"language": "Language"
+		},
 		"close": "Close"
 	},
 	"github": {
