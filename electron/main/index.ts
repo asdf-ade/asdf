@@ -144,10 +144,25 @@ function createWindow(): BrowserWindow {
 	// it: a renderer that died, one that hung, or a page that tried to load and
 	// could not — which in development is the dev server having gone away. Each
 	// says so here, because none of them says anything on its own.
+	//
+	// A dead renderer also leaves the window behind it: a white rectangle with
+	// no way back but quitting. That one is recoverable, so it is recovered.
+	//
+	// Once, though: a renderer that dies as soon as it loads would spin here
+	// forever, and a window that keeps blinking is worse than one that is
+	// plainly broken. A second death inside ten seconds is left alone.
+	let recovered = 0;
 	window.webContents.on("render-process-gone", (_event, details) => {
 		console.error(
 			`renderer gone: ${details.reason} (exit code ${details.exitCode})`,
 		);
+		if (Date.now() - recovered < 10_000) return;
+		recovered = Date.now();
+		// Whatever it opened is unreachable now: the ids were in its memory, so
+		// nothing can place a view or write to a shell again. They go with it.
+		terminals.closeAll();
+		browsers.closeAll();
+		window.webContents.reload();
 	});
 	window.on("unresponsive", () => console.error("renderer is not responding"));
 	window.webContents.on(
