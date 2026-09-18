@@ -1,4 +1,4 @@
-import { ChevronLeft } from "lucide-react";
+import { Check, ChevronLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -202,10 +202,12 @@ export function SettingsBody({
 							>
 								<span
 									className={cn(
-										"mt-px size-3.5 shrink-0 rounded-sm border",
+										"mt-px flex size-3.5 shrink-0 items-center justify-center rounded-sm border",
 										keepAwake && "border-foreground bg-foreground",
 									)}
-								/>
+								>
+									{keepAwake && <Check className="size-3 text-background" />}
+								</span>
 								<span className="flex min-w-0 flex-col gap-0.5">
 									<span className="text-xs">{t("settings.keepAwake")}</span>
 									<span className="text-[11px] text-muted-foreground">

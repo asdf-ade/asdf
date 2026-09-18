@@ -162,9 +162,9 @@
 		},
 		"language": "语言",
 		"sections": {
-			"appearance": "外观",
+			"appearance": "主题",
 			"language": "语言",
-			"power": "电源"
+			"power": "防止睡眠"
 		},
 		"back": "返回",
 		"keepAwake": "代理工作时阻止睡眠",

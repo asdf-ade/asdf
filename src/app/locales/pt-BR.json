@@ -162,9 +162,9 @@
 		},
 		"language": "Idioma",
 		"sections": {
-			"appearance": "Aparência",
+			"appearance": "Tema",
 			"language": "Idioma",
-			"power": "Energia"
+			"power": "Manter ativo"
 		},
 		"back": "Voltar",
 		"keepAwake": "Manter a máquina acordada enquanto um agente trabalha",
