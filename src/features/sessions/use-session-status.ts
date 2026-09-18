@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	NOTIFICATION_ACTIVATE_EVENT,
 	TERMINAL_ACTIVITY_EVENT,
@@ -94,12 +94,26 @@ export function useSessionStatus({
 		};
 	}, []);
 
-	// Opening a session is reading it, so its alert clears.
-	useEffect(() => {
-		if (current.current[activeSessionId] !== "done") return;
-		current.current = { ...current.current, [activeSessionId]: "idle" };
+	/** Marks a session read, which is what clears its alert. */
+	const markSeen = useCallback((sessionId: string) => {
+		if (current.current[sessionId] !== "done") return;
+		current.current = { ...current.current, [sessionId]: "idle" };
 		setStatus(current.current);
-	}, [activeSessionId]);
+	}, []);
+
+	// Opening a session is reading it.
+	useEffect(() => markSeen(activeSessionId), [activeSessionId, markSeen]);
+
+	// So is coming back to the window while that session is already the one on
+	// screen. Work finishes unwatched most often because the window was behind
+	// something else, and clearing only on a switch left the bell ringing at a
+	// session the person was looking straight at — with nothing to click but a
+	// row that was already selected.
+	useEffect(() => {
+		const onFocus = () => markSeen(latest.current.activeSessionId);
+		window.addEventListener("focus", onFocus);
+		return () => window.removeEventListener("focus", onFocus);
+	}, [markSeen]);
 
 	return status;
 }
