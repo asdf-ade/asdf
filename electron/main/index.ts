@@ -81,6 +81,16 @@ app.commandLine.appendSwitch("remote-debugging-port", "0");
 // quit to their shortcuts.
 if (process.platform !== "darwin") Menu.setApplicationMenu(null);
 
+// Windows shows a notification only for an app it can name, and it takes that
+// name from the Start Menu shortcut electron-builder writes with this id.
+// Development has no shortcut, so the executable stands in: without either,
+// every toast is dropped in silence and the feature looks broken rather than
+// blocked. Must be set before the first notification.
+if (process.platform === "win32")
+	app.setAppUserModelId(
+		app.isPackaged ? "io.github.asdf-ade.asdf" : process.execPath,
+	);
+
 let main: BrowserWindow | null = null;
 /** Set once the renderer has agreed the window may go. */
 let closing = false;
@@ -336,7 +346,10 @@ ipcMain.handle(
 		}: { title: string; body: string; sessionId: string },
 	) => {
 		if (!Notification.isSupported()) return ok(null);
-		const note = new Notification({ title, body });
+		// Not silent: the sound is the half of a notification that reaches
+		// someone who is looking at something else, which is who this is for.
+		// The OS chooses which sound, the same one its own notifications use.
+		const note = new Notification({ title, body, silent: false });
 		note.on("click", () => {
 			const window = main;
 			if (!window) return;
