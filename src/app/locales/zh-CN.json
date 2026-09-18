@@ -141,6 +141,14 @@
 			"cancel": "取消",
 			"clone": "克隆",
 			"cloning": "正在克隆…"
+		},
+		"status": {
+			"idle": "已完成",
+			"busy": "工作中",
+			"done": "已完成 · 尚未查看"
+		},
+		"notify": {
+			"finished": "工作已完成。"
 		}
 	},
 	"settings": {
@@ -155,9 +163,12 @@
 		"language": "语言",
 		"sections": {
 			"appearance": "外观",
-			"language": "语言"
+			"language": "语言",
+			"power": "电源"
 		},
-		"back": "返回"
+		"back": "返回",
+		"keepAwake": "代理工作时阻止睡眠",
+		"keepAwakeHint": "只要有会话在工作，电脑就不会进入睡眠。"
 	},
 	"github": {
 		"issues": "议题",

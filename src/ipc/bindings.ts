@@ -91,6 +91,18 @@ export const TERMINAL_OUTPUT_EVENT = "terminal://output";
 /** Emitted once with the session id when its shell has ended. */
 export const TERMINAL_EXIT_EVENT = "terminal://exit";
 
+/**
+ * Emitted when a session starts or stops writing, which is how a shell that is
+ * working is told from one that has finished. Worked out in the main process
+ * because a session that is not on screen has nothing mounted in the renderer.
+ */
+export const TERMINAL_ACTIVITY_EVENT = "terminal://activity";
+
+export type TerminalActivity = { id: number; busy: boolean };
+
+/** Emitted with the session id when a finished-work notification is clicked. */
+export const NOTIFICATION_ACTIVATE_EVENT = "notification://activate";
+
 /** Emitted while an update downloads. */
 export const UPDATER_PROGRESS_EVENT = "updater://progress";
 

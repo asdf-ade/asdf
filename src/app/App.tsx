@@ -17,6 +17,7 @@ import { SidePanel } from "@/features/sessions/components/SidePanel";
 import type { Layout } from "@/features/sessions/panes";
 import type { Session } from "@/features/sessions/types";
 import { useRepo } from "@/features/sessions/use-repo";
+import { useSessionStatus } from "@/features/sessions/use-session-status";
 import { useSessions } from "@/features/sessions/use-sessions";
 import { TerminalPane } from "@/features/terminal/components/TerminalPane";
 import { useTerminalCwd } from "@/features/terminal/use-terminal-cwd";
@@ -191,6 +192,12 @@ export function App() {
 	const [naming, setNaming] = useState<string | null>(null);
 	// The workspace a clone is being set up for, and null when none is.
 	const [cloningInto, setCloningInto] = useState<string | null>(null);
+	// Whether the machine may sleep while an agent works. The block itself is
+	// the main process's, and it holds one only while something is working.
+	const [keepAwake, setKeepAwake] = useState(false);
+	useEffect(() => {
+		void ipc.keepAwake(keepAwake);
+	}, [keepAwake]);
 	const [dragging, setDragging] = useState(false);
 	// Which pty sits behind each terminal tab, so the panel can ask the OS
 	// where that shell is. The tab on screen decides what the panel shows.
@@ -302,6 +309,18 @@ export function App() {
 	// made, wherever the asking started.
 	const newWorkspace = () => setNaming("");
 
+	// What every session's shell is doing, including the ones not on screen.
+	const status = useSessionStatus({
+		ptys,
+		activeSessionId: sessions.activeSessionId,
+		titleOf: (sessionId) => {
+			const session = sessions.sessions.find((item) => item.id === sessionId);
+			return session ? sessionTitle(session) : t("app.title");
+		},
+		body: t("session.notify.finished"),
+		onOpen: sessions.openSession,
+	});
+
 	// What "+" resolves to once the dialog answers. A terminal is a session, so
 	// asking for one opens another window of the same workspace rather than a
 	// second terminal in this one.
@@ -360,6 +379,7 @@ export function App() {
 							sessions={sessions.sessions}
 							browsers={sessions.browsers}
 							sessionTitle={sessionTitle}
+							status={status}
 							browserTitle={browserTitle}
 							activeProjectId={sessions.activeProjectId}
 							activeSessionId={sessions.activeSessionId}
@@ -518,6 +538,8 @@ export function App() {
 						section={settings}
 						theme={theme}
 						onTheme={setTheme}
+						keepAwake={keepAwake}
+						onKeepAwake={setKeepAwake}
 						// With no panel and no tab strip on screen, this row is the
 						// window's top right corner, so the caption buttons belong to it.
 						trailing={!platform.isMac && <WindowControls />}

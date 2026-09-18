@@ -6,17 +6,22 @@ import {
 	dialog,
 	ipcMain,
 	Menu,
+	Notification,
 	nativeTheme,
+	powerSaveBlocker,
 	shell,
 } from "electron";
 import {
 	BROWSER_STATE_EVENT,
 	CLONE_PROGRESS_EVENT,
+	NOTIFICATION_ACTIVATE_EVENT,
 	type SearchOptions,
+	TERMINAL_ACTIVITY_EVENT,
 	TERMINAL_EXIT_EVENT,
 	TERMINAL_OUTPUT_EVENT,
 	WINDOW_CLOSE_REQUESTED_EVENT,
 } from "@/ipc/bindings";
+import { Activity } from "./activity";
 import { Browsers } from "./browser";
 import { clone } from "./git";
 import * as repo from "./repo";
@@ -30,6 +35,34 @@ import { open as openWorkspace } from "./workspace";
 const directory = path.dirname(fileURLToPath(import.meta.url));
 
 const terminals = new Registry();
+
+/** How long a shell must be quiet before its work counts as finished. */
+const QUIET_MS = 1000;
+
+/** Whether the person asked the machine to stay awake while agents work. */
+let keepAwake = false;
+/** The id of the block being held, or null while the machine may sleep. */
+let sleepBlock: number | null = null;
+
+const activity = new Activity(QUIET_MS, (id, busy) => {
+	main?.webContents.send(TERMINAL_ACTIVITY_EVENT, { id, busy });
+	holdSleep();
+});
+
+/**
+ * Starts or stops the sleep block. Held only while both are true — the setting
+ * is on and something is working — so the machine sleeps as it normally would
+ * the moment the last agent stops.
+ */
+function holdSleep(): void {
+	const wanted = keepAwake && activity.working > 0;
+	if (wanted && sleepBlock === null) {
+		sleepBlock = powerSaveBlocker.start("prevent-app-suspension");
+	} else if (!wanted && sleepBlock !== null) {
+		powerSaveBlocker.stop(sleepBlock);
+		sleepBlock = null;
+	}
+}
 
 // Every WebContents becomes a CDP target on this port, including the browser
 // panes — that is how agent-browser drives what the person sees. Port 0 lets
@@ -225,9 +258,15 @@ ipcMain.handle(
 		{ cwd, cols, rows }: { cwd: string | null; cols: number; rows: number },
 	) =>
 		terminals.open(cwd, cols, rows, {
-			onOutput: (id, chunk) =>
-				main?.webContents.send(TERMINAL_OUTPUT_EVENT, { id, chunk }),
-			onExit: (id) => main?.webContents.send(TERMINAL_EXIT_EVENT, id),
+			onOutput: (id, chunk) => {
+				activity.saw(id);
+				main?.webContents.send(TERMINAL_OUTPUT_EVENT, { id, chunk });
+			},
+			onExit: (id) => {
+				activity.forget(id);
+				holdSleep();
+				main?.webContents.send(TERMINAL_EXIT_EVENT, id);
+			},
 		}),
 );
 
@@ -243,8 +282,49 @@ ipcMain.handle(
 		terminals.resize(id, cols, rows),
 );
 
-ipcMain.handle("close_terminal", (_event, { id }: { id: number }) =>
-	terminals.close(id),
+ipcMain.handle("close_terminal", (_event, { id }: { id: number }) => {
+	activity.forget(id);
+	holdSleep();
+	return terminals.close(id);
+});
+
+/**
+ * The notification a finished session raises when nobody was watching it. The
+ * renderer decides when that is — it is the side that knows which session is on
+ * screen — and writes the words, since the strings are its to translate.
+ */
+ipcMain.handle(
+	"notify",
+	(
+		_event,
+		{
+			title,
+			body,
+			sessionId,
+		}: { title: string; body: string; sessionId: string },
+	) => {
+		if (!Notification.isSupported()) return ok(null);
+		const note = new Notification({ title, body });
+		note.on("click", () => {
+			const window = main;
+			if (!window) return;
+			if (window.isMinimized()) window.restore();
+			window.show();
+			window.focus();
+			window.webContents.send(NOTIFICATION_ACTIVATE_EVENT, sessionId);
+		});
+		note.show();
+		return ok(null);
+	},
+);
+
+ipcMain.handle(
+	"power://keep-awake",
+	(_event, { enabled }: { enabled: boolean }) => {
+		keepAwake = enabled;
+		holdSleep();
+		return ok(null);
+	},
 );
 
 // The folder a workspace opens in. The OS dialog is the whole picker: it
@@ -338,6 +418,8 @@ if (!app.requestSingleInstanceLock()) {
 	// browser views go with them.
 	app.on("before-quit", () => {
 		closing = true;
+		keepAwake = false;
+		holdSleep();
 		terminals.closeAll();
 		browsers.closeAll();
 	});

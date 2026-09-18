@@ -141,6 +141,14 @@
 			"cancel": "キャンセル",
 			"clone": "クローン",
 			"cloning": "クローン中…"
+		},
+		"status": {
+			"idle": "完了",
+			"busy": "作業中",
+			"done": "完了 · 未確認"
+		},
+		"notify": {
+			"finished": "作業が完了しました。"
 		}
 	},
 	"settings": {
@@ -155,9 +163,12 @@
 		"language": "言語",
 		"sections": {
 			"appearance": "外観",
-			"language": "言語"
+			"language": "言語",
+			"power": "電源"
 		},
-		"back": "戻る"
+		"back": "戻る",
+		"keepAwake": "エージェントの作業中はスリープさせない",
+		"keepAwakeHint": "作業中のセッションがある間はスリープしません。"
 	},
 	"github": {
 		"issues": "イシュー",
