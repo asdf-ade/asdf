@@ -20,6 +20,8 @@
 export class Activity {
 	private readonly quiet = new Map<number, ReturnType<typeof setTimeout>>();
 	private readonly busy = new Set<number>();
+	/** Sessions whose output is being ignored for a moment; see `mute`. */
+	private readonly muted = new Map<number, ReturnType<typeof setTimeout>>();
 
 	constructor(
 		/** How long a shell must say nothing before its work counts as done. */
@@ -27,8 +29,25 @@ export class Activity {
 		private readonly onChange: (id: number, busy: boolean) => void,
 	) {}
 
+	/**
+	 * Stops counting this session's output as work for a while.
+	 *
+	 * Not everything a shell prints is work. Opening one prints a prompt, and
+	 * resizing makes it repaint — which is what a person switching sessions
+	 * causes, since the pane that comes on screen gets its size then. Both would
+	 * otherwise spin the sidebar for a moment over nothing.
+	 */
+	mute(id: number, ms: number): void {
+		const pending = this.muted.get(id);
+		if (pending) clearTimeout(pending);
+		const timer = setTimeout(() => this.muted.delete(id), ms);
+		timer.unref?.();
+		this.muted.set(id, timer);
+	}
+
 	/** Called for every chunk a session prints. */
 	saw(id: number): void {
+		if (this.muted.has(id)) return;
 		const pending = this.quiet.get(id);
 		if (pending) clearTimeout(pending);
 		if (!this.busy.has(id)) {
@@ -50,6 +69,9 @@ export class Activity {
 		const pending = this.quiet.get(id);
 		if (pending) clearTimeout(pending);
 		this.quiet.delete(id);
+		const muted = this.muted.get(id);
+		if (muted) clearTimeout(muted);
+		this.muted.delete(id);
 		this.busy.delete(id);
 	}
 
