@@ -157,7 +157,7 @@
 			"appearance": "Appearance",
 			"language": "Language"
 		},
-		"close": "Close"
+		"back": "Back"
 	},
 	"github": {
 		"issues": "Issues",
