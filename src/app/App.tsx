@@ -28,7 +28,12 @@ import { platform } from "@/ipc/platform";
 import { cn } from "@/lib/utils";
 import { CloneRepoDialog } from "./CloneRepoDialog";
 import { NewTabDialog, type TabKind } from "./NewTabDialog";
-import { SettingsPage, type SettingsSection, type Theme } from "./SettingsPage";
+import {
+	SettingsBody,
+	SettingsNav,
+	type SettingsSection,
+	type Theme,
+} from "./SettingsPage";
 import { useResizable } from "./use-resizable";
 
 /**
@@ -322,7 +327,19 @@ export function App() {
 		<div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
 			<div className="flex min-h-0 flex-1">
 				{/* Settings sits at the foot of the sidebar, out of the way of the work. */}
-				{sidebarOpen && (
+				{/* Settings takes the window: its sections stand where the workspaces
+				    do, and the panel is gone. Each of these is its own slot rather
+				    than one branch around the lot, so the panes below keep their
+				    place in the tree — and with it their shells — across the swap. */}
+				{settings && (
+					<SettingsNav
+						section={settings}
+						onSection={setSettings}
+						onBack={() => setSettings(null)}
+						width={sidebarWidth}
+					/>
+				)}
+				{!settings && sidebarOpen && (
 					<div
 						style={{ width: sidebarWidth }}
 						className="flex min-h-0 shrink-0 flex-col bg-muted/30"
@@ -374,7 +391,9 @@ export function App() {
 						</div>
 					</div>
 				)}
-				{sidebarOpen && <ResizeHandle onPointerDown={resizeSidebar} />}
+				{!settings && sidebarOpen && (
+					<ResizeHandle onPointerDown={resizeSidebar} />
+				)}
 
 				{/* One PaneArea per leaf of the layout tree. The panel toggles and
 				    caption buttons belong to the window, so only the first and last
@@ -495,17 +514,18 @@ export function App() {
 				</div>
 
 				{settings && (
-					<SettingsPage
+					<SettingsBody
 						section={settings}
-						onSection={setSettings}
-						onClose={() => setSettings(null)}
 						theme={theme}
 						onTheme={setTheme}
+						// With no panel and no tab strip on screen, this row is the
+						// window's top right corner, so the caption buttons belong to it.
+						trailing={!platform.isMac && <WindowControls />}
 					/>
 				)}
 
-				{panelOpen && <ResizeHandle onPointerDown={resizePanel} />}
-				{panelOpen && (
+				{!settings && panelOpen && <ResizeHandle onPointerDown={resizePanel} />}
+				{!settings && panelOpen && (
 					// `min-h-0`, or the column takes its height from its content:
 					// a long file tree grows past the window instead of scrolling
 					// inside it, which is both why the panel had no scrollbar and
