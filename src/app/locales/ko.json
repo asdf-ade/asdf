@@ -162,9 +162,9 @@
 		},
 		"language": "언어",
 		"sections": {
-			"appearance": "모양",
+			"appearance": "테마",
 			"language": "언어",
-			"power": "전원"
+			"power": "절전 방지"
 		},
 		"back": "뒤로",
 		"keepAwake": "에이전트가 작업하는 동안 절전 막기",

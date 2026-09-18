@@ -162,9 +162,9 @@
 		},
 		"language": "Idioma",
 		"sections": {
-			"appearance": "Apariencia",
+			"appearance": "Tema",
 			"language": "Idioma",
-			"power": "Energía"
+			"power": "Mantener activo"
 		},
 		"back": "Atrás",
 		"keepAwake": "Mantener el equipo despierto mientras un agente trabaja",

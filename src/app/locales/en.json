@@ -162,9 +162,9 @@
 		},
 		"language": "Language",
 		"sections": {
-			"appearance": "Appearance",
+			"appearance": "Theme",
 			"language": "Language",
-			"power": "Power"
+			"power": "Stay awake"
 		},
 		"back": "Back",
 		"keepAwake": "Keep the machine awake while an agent is working",

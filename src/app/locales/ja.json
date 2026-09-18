@@ -162,9 +162,9 @@
 		},
 		"language": "言語",
 		"sections": {
-			"appearance": "外観",
+			"appearance": "テーマ",
 			"language": "言語",
-			"power": "電源"
+			"power": "スリープ防止"
 		},
 		"back": "戻る",
 		"keepAwake": "エージェントの作業中はスリープさせない",
