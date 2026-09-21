@@ -84,8 +84,9 @@ export type SearchResult = {
 	 *  reporting a total it does not have. */
 	capped: boolean;
 	/** The files the query names rather than the ones it is written in, listed
-	 *  above them: knowing the file you want by name is the ordinary case. */
-	names: string[];
+	 *  above them: knowing the file you want by name is the ordinary case. The
+	 *  ranges are into the path, and are lit the way a line's are. */
+	names: { path: string; ranges: [number, number][] }[];
 	/** True when the name list was cut short, as `capped` is for the matches. */
 	namesCapped: boolean;
 };

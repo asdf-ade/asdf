@@ -105,10 +105,9 @@
 			"regex": "Usar expressão regular",
 			"searching": "Pesquisando…",
 			"none": "Nenhum resultado.",
-			"count": "{{matches}} resultados em {{files}} arquivos",
-			"cappedCount": "Primeiros {{matches}} resultados em {{files}} arquivos",
 			"toggleGlobs": "Mostrar detalhes da busca",
-			"names": "Nomes de arquivo"
+			"names": "Nomes de arquivo",
+			"contents": "Conteúdo dos arquivos"
 		},
 		"pane": {
 			"close": "Fechar janela",

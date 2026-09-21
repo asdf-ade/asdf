@@ -105,10 +105,9 @@
 			"regex": "使用正则表达式",
 			"searching": "正在搜索…",
 			"none": "没有结果。",
-			"count": "在 {{files}} 个文件中找到 {{matches}} 处",
-			"cappedCount": "在 {{files}} 个文件中的前 {{matches}} 处",
 			"toggleGlobs": "展开搜索选项",
-			"names": "文件名"
+			"names": "文件名",
+			"contents": "文件内容"
 		},
 		"pane": {
 			"close": "关闭窗口",

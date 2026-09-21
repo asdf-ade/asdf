@@ -180,17 +180,18 @@ export function pickNames(
 	stdout: string,
 	query: string,
 	options: SearchOptions,
-): { names: string[]; namesCapped: boolean } {
+): Pick<SearchResult, "names" | "namesCapped"> {
 	const pattern = matcher(query, options);
 	if (!pattern) return { names: [], namesCapped: false };
 
-	const names: string[] = [];
+	const names: SearchResult["names"] = [];
 	// `--cached --others` lists a file that is both tracked and modified once,
 	// but a path can still arrive twice; a name is one row whatever git says.
 	for (const path of new Set(stdout.split("\0"))) {
 		if (!path || !pattern.test(path)) continue;
 		if (names.length >= MAX_NAMES) return { names, namesCapped: true };
-		names.push(path);
+		// Where in the path it matched, for the same highlight the lines get.
+		names.push({ path, ranges: rangesIn(path, query, options) });
 	}
 	return { names, namesCapped: false };
 }
@@ -238,7 +239,7 @@ async function names(
 	cwd: string,
 	query: string,
 	options: SearchOptions,
-): Promise<{ names: string[]; namesCapped: boolean }> {
+): Promise<Pick<SearchResult, "names" | "namesCapped">> {
 	try {
 		const { stdout } = await run(
 			"git",

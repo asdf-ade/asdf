@@ -581,8 +581,8 @@ export function App() {
 							reviewOf={repo.reviewOf}
 							onRefreshGithub={() => void repo.refreshGithub()}
 							onCommit={repo.commit}
-							onOpenFile={(dir, path, line) =>
-								active && sessions.openFile(active.id, dir, path, line)
+							onOpenFile={(dir, path, line, ranges) =>
+								active && sessions.openFile(active.id, dir, path, line, ranges)
 							}
 							onOpenIssue={sessions.openIssue}
 							onOpenPull={sessions.openPull}
