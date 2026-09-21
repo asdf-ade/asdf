@@ -107,7 +107,8 @@
 			"none": "No results.",
 			"count": "{{matches}} results in {{files}} files",
 			"cappedCount": "First {{matches}} results in {{files}} files",
-			"toggleGlobs": "Toggle search details"
+			"toggleGlobs": "Toggle search details",
+			"names": "File names"
 		},
 		"pane": {
 			"close": "Close window",

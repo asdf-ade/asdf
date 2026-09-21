@@ -107,7 +107,8 @@
 			"none": "結果がありません。",
 			"count": "{{files}} 個のファイルに {{matches}} 件",
 			"cappedCount": "{{files}} 個のファイルの最初の {{matches}} 件",
-			"toggleGlobs": "検索オプションの表示"
+			"toggleGlobs": "検索オプションの表示",
+			"names": "ファイル名"
 		},
 		"pane": {
 			"close": "ウィンドウを閉じる",

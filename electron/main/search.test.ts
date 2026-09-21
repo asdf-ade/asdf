@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { SearchOptions } from "@/ipc/bindings";
-import { grepArgs, includePaths, parseGrep, rangesIn } from "./search";
+import {
+	grepArgs,
+	includePaths,
+	parseGrep,
+	pickNames,
+	rangesIn,
+} from "./search";
 
 const plain: SearchOptions = {
 	matchCase: false,
@@ -175,6 +181,8 @@ describe("parseGrep", () => {
 			files: [],
 			matches: 0,
 			capped: false,
+			names: [],
+			namesCapped: false,
 		});
 	});
 
@@ -185,5 +193,56 @@ describe("parseGrep", () => {
 			plain,
 		);
 		expect(result.files).toHaveLength(1);
+	});
+});
+
+describe("pickNames", () => {
+	/** `git ls-files -z` writes the paths separated by NUL. */
+	const list = (...paths: string[]) => paths.join("\0");
+
+	it("keeps the paths the query names, wherever in them it is", () => {
+		const { names } = pickNames(
+			list("src/app/App.tsx", "electron/main/browser.ts", "README.md"),
+			"browser",
+			plain,
+		);
+		expect(names).toEqual(["electron/main/browser.ts"]);
+	});
+
+	it("folds case unless match case is on", () => {
+		const paths = list("src/App.tsx");
+		expect(pickNames(paths, "app", plain).names).toEqual(["src/App.tsx"]);
+		expect(
+			pickNames(paths, "app", { ...plain, matchCase: true }).names,
+		).toEqual([]);
+	});
+
+	it("reads the query literally unless regex is on", () => {
+		const paths = list("a.ts", "axts");
+		expect(pickNames(paths, "a.ts", plain).names).toEqual(["a.ts"]);
+		expect(pickNames(paths, "a.ts", { ...plain, regex: true }).names).toEqual([
+			"a.ts",
+			"axts",
+		]);
+	});
+
+	it("says so when it stopped listing rather than listing everything", () => {
+		const many = list(
+			...Array.from({ length: 80 }, (_, index) => `src/a${index}.ts`),
+		);
+		const { names, namesCapped } = pickNames(many, "src/", plain);
+		expect(names).toHaveLength(50);
+		expect(namesCapped).toBe(true);
+	});
+
+	it("lists a path once however many times git names it", () => {
+		expect(pickNames(list("a.ts", "a.ts"), "a", plain).names).toEqual(["a.ts"]);
+	});
+
+	it("has nothing to say about a pattern it cannot read", () => {
+		expect(pickNames(list("a.ts"), "[", { ...plain, regex: true })).toEqual({
+			names: [],
+			namesCapped: false,
+		});
 	});
 });
