@@ -199,19 +199,30 @@ describe("parseGrep", () => {
 describe("pickNames", () => {
 	/** `git ls-files -z` writes the paths separated by NUL. */
 	const list = (...paths: string[]) => paths.join("\0");
+	const paths_ = ({ names }: { names: { path: string }[] }) =>
+		names.map((name) => name.path);
 
 	it("keeps the paths the query names, wherever in them it is", () => {
-		const { names } = pickNames(
+		const found = pickNames(
 			list("src/app/App.tsx", "electron/main/browser.ts", "README.md"),
 			"browser",
 			plain,
 		);
-		expect(names).toEqual(["electron/main/browser.ts"]);
+		expect(paths_(found)).toEqual(["electron/main/browser.ts"]);
+	});
+
+	it("says where in the path it matched, for the highlight", () => {
+		const { names } = pickNames(
+			list("electron/main/browser.ts"),
+			"main",
+			plain,
+		);
+		expect(names[0].ranges).toEqual([[9, 13]]);
 	});
 
 	it("folds case unless match case is on", () => {
 		const paths = list("src/App.tsx");
-		expect(pickNames(paths, "app", plain).names).toEqual(["src/App.tsx"]);
+		expect(paths_(pickNames(paths, "app", plain))).toEqual(["src/App.tsx"]);
 		expect(
 			pickNames(paths, "app", { ...plain, matchCase: true }).names,
 		).toEqual([]);
@@ -219,11 +230,10 @@ describe("pickNames", () => {
 
 	it("reads the query literally unless regex is on", () => {
 		const paths = list("a.ts", "axts");
-		expect(pickNames(paths, "a.ts", plain).names).toEqual(["a.ts"]);
-		expect(pickNames(paths, "a.ts", { ...plain, regex: true }).names).toEqual([
-			"a.ts",
-			"axts",
-		]);
+		expect(paths_(pickNames(paths, "a.ts", plain))).toEqual(["a.ts"]);
+		expect(paths_(pickNames(paths, "a.ts", { ...plain, regex: true }))).toEqual(
+			["a.ts", "axts"],
+		);
 	});
 
 	it("says so when it stopped listing rather than listing everything", () => {
@@ -236,7 +246,9 @@ describe("pickNames", () => {
 	});
 
 	it("lists a path once however many times git names it", () => {
-		expect(pickNames(list("a.ts", "a.ts"), "a", plain).names).toEqual(["a.ts"]);
+		expect(paths_(pickNames(list("a.ts", "a.ts"), "a", plain))).toEqual([
+			"a.ts",
+		]);
 	});
 
 	it("has nothing to say about a pattern it cannot read", () => {

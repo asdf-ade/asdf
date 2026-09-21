@@ -8,7 +8,7 @@ import {
 	WholeWord,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import type { SearchLine, SearchOptions, SearchResult } from "@/ipc/bindings";
@@ -42,7 +42,7 @@ export function SearchPanel({
 }: {
 	/** The folder to search: the terminal's, so it follows the shell. */
 	cwd: string;
-	onOpen: (path: string, line: number) => void;
+	onOpen: (path: string, line: number, ranges?: [number, number][]) => void;
 	/** What the panel shows while the box is empty — the file tree. One box,
 	 *  and the thing under it answers to what is in it. */
 	children: ReactNode;
@@ -92,18 +92,10 @@ export function SearchPanel({
 	const toggle = (key: "matchCase" | "wholeWord" | "regex") =>
 		setOptions((previous) => ({ ...previous, [key]: !previous[key] }));
 
-	const summary = useMemo(() => {
-		if (state.status !== "done") return null;
-		const { matches, files, capped, names } = state.result;
-		// A query that names a file and appears in none of them has found
-		// something, so "no results" would be the panel disagreeing with itself.
-		if (matches === 0)
-			return names.length === 0 ? t("session.search.none") : null;
-		return t(capped ? "session.search.cappedCount" : "session.search.count", {
-			matches,
-			files: files.length,
-		});
-	}, [state, t]);
+	const empty =
+		state.status === "done" &&
+		state.result.matches === 0 &&
+		state.result.names.length === 0;
 
 	return (
 		<div className="flex min-h-0 flex-1 flex-col">
@@ -184,12 +176,6 @@ export function SearchPanel({
 				</div>
 			</div>
 
-			{summary && (
-				<p className="border-b px-3 py-1 text-[10px] text-muted-foreground">
-					{summary}
-				</p>
-			)}
-
 			<div
 				className={cn(
 					"flex min-h-0 flex-1 flex-col",
@@ -202,42 +188,62 @@ export function SearchPanel({
 					<Note>{t("session.search.searching")}</Note>
 				) : state.status === "failed" ? (
 					<Note>{state.reason}</Note>
+				) : empty ? (
+					<Note>{t("session.search.none")}</Note>
 				) : (
 					<>
 						{state.result.names.length > 0 && (
 							<ul className="mb-1">
-								<li className="flex items-center gap-1.5 px-1 py-1 text-[10px] text-muted-foreground uppercase tracking-wide">
-									<span className="min-w-0 flex-1 truncate">
-										{t("session.search.names")}
-									</span>
-									{/* The count says when the list was cut the way the summary
-									    line does for the matches: a plus, not a footnote. */}
-									<span className="shrink-0 rounded-full bg-muted px-1.5 tabular-nums">
-										{state.result.names.length}
-										{state.result.namesCapped ? "+" : ""}
-									</span>
-								</li>
-								{state.result.names.map((path) => (
-									<li key={path}>
-										<button
-											type="button"
-											title={path}
-											// A name is a whole answer, so it opens the file at its
-											// top rather than at a line nothing pointed to.
-											onClick={() => onOpen(path, 1)}
-											className="flex w-full items-center gap-1.5 rounded-md py-1 pr-2 pl-1 text-left text-xs hover:bg-accent/60"
-										>
-											<FileIcon className="size-3.5 shrink-0 text-muted-foreground" />
-											<span className="truncate">{baseName(path)}</span>
-											<span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">
-												{dirName(path)}
-											</span>
-										</button>
-									</li>
-								))}
+								<Heading
+									label={t("session.search.names")}
+									count={state.result.names.length}
+									capped={state.result.namesCapped}
+								/>
+								{state.result.names.map((name) => {
+									const dir = dirName(name.path);
+									return (
+										<li key={name.path}>
+											<button
+												type="button"
+												title={name.path}
+												// A name is a whole answer, so it opens the file at its
+												// top rather than at a line nothing pointed to.
+												onClick={() => onOpen(name.path, 1)}
+												className="flex w-full items-center gap-1.5 rounded-md py-1 pr-2 pl-1 text-left text-xs hover:bg-accent/60"
+											>
+												<FileIcon className="size-3.5 shrink-0 text-muted-foreground" />
+												{/* The row is one path split in two, so the ranges are
+												    split with it: what falls in the folder lights up
+												    there, and what falls in the name lights up here. */}
+												<span className="truncate">
+													<Highlighted
+														text={baseName(name.path)}
+														ranges={shift(
+															name.ranges,
+															dir ? dir.length + 1 : 0,
+														)}
+													/>
+												</span>
+												<span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">
+													<Highlighted
+														text={dir}
+														ranges={clip(name.ranges, dir.length)}
+													/>
+												</span>
+											</button>
+										</li>
+									);
+								})}
 							</ul>
 						)}
 						<ul>
+							{state.result.files.length > 0 && (
+								<Heading
+									label={t("session.search.contents")}
+									count={state.result.matches}
+									capped={state.result.capped}
+								/>
+							)}
 							{state.result.files.map((file) => {
 								const open = !folded.has(file.path);
 								return (
@@ -277,14 +283,16 @@ export function SearchPanel({
 													<li key={`${file.path}:${line.number}`}>
 														<button
 															type="button"
-															onClick={() => onOpen(file.path, line.number)}
+															onClick={() =>
+																onOpen(file.path, line.number, line.ranges)
+															}
 															className="flex w-full items-start gap-2 rounded-md py-0.5 pr-2 pl-7 text-left hover:bg-accent/60"
 														>
 															<span className="w-8 shrink-0 text-right text-[10px] text-muted-foreground tabular-nums">
 																{line.number}
 															</span>
 															<span className="min-w-0 flex-1 truncate font-mono text-[11px]">
-																<Highlighted line={line} />
+																<Line line={line} />
 															</span>
 														</button>
 													</li>
@@ -302,15 +310,60 @@ export function SearchPanel({
 	);
 }
 
-/** The line, with the parts that matched lit. Leading whitespace goes: at this
- *  width an indented hit would be a row of blanks with the answer off the end. */
-function Highlighted({ line }: { line: SearchLine }) {
-	const trimmed = line.text.length - line.text.trimStart().length;
-	const text = line.text.slice(trimmed);
-	const ranges = line.ranges
-		.map(([start, end]) => [start - trimmed, end - trimmed] as const)
+/** What a section of answers is called, and how many of them there are. The
+ *  count carries a "+" when the list was cut, rather than a footnote. */
+function Heading({
+	label,
+	count,
+	capped,
+}: {
+	label: string;
+	count: number;
+	capped: boolean;
+}) {
+	return (
+		<li className="flex items-center gap-1.5 px-1 py-1 text-[10px] text-muted-foreground uppercase tracking-wide">
+			<span className="min-w-0 flex-1 truncate">{label}</span>
+			<span className="shrink-0 rounded-full bg-muted px-1.5 tabular-nums">
+				{count}
+				{capped ? "+" : ""}
+			</span>
+		</li>
+	);
+}
+
+/** Ranges into a path, read against a part of it that starts `by` in. */
+const shift = (ranges: [number, number][], by: number): [number, number][] =>
+	ranges
+		.map(([start, end]) => [start - by, end - by] as [number, number])
 		.filter(([, end]) => end > 0);
 
+/** The same ranges, read against a part that ends at `end`. */
+const clip = (ranges: [number, number][], end: number): [number, number][] =>
+	ranges
+		.filter(([start]) => start < end)
+		.map(([start, stop]) => [start, Math.min(stop, end)] as [number, number]);
+
+/** A matching line, with its leading whitespace gone: at this width an indented
+ *  hit would be a row of blanks with the answer off the end. */
+function Line({ line }: { line: SearchLine }) {
+	const trimmed = line.text.length - line.text.trimStart().length;
+	return (
+		<Highlighted
+			text={line.text.slice(trimmed)}
+			ranges={shift(line.ranges, trimmed)}
+		/>
+	);
+}
+
+/** Text with the parts that matched lit. */
+function Highlighted({
+	text,
+	ranges,
+}: {
+	text: string;
+	ranges: [number, number][];
+}) {
 	const parts: { text: string; lit: boolean }[] = [];
 	let at = 0;
 	for (const [start, end] of ranges) {

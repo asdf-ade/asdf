@@ -98,7 +98,14 @@ type Props = {
 	onCommit: (message: string) => Promise<boolean>;
 	/** `dir` is what `path` is relative to: the shell's folder for the tree,
 	 *  the repository root for a change. */
-	onOpenFile: (dir: string, path: string, line?: number) => void;
+	/** `ranges` are where the query matched on that line, so the file opens
+	 *  with the same spans lit as the result that led to it. */
+	onOpenFile: (
+		dir: string,
+		path: string,
+		line?: number,
+		ranges?: [number, number][],
+	) => void;
 	onOpenIssue: (number: number) => void;
 	onOpenPull: (number: number) => void;
 };
@@ -184,7 +191,9 @@ export function SidePanel({
 			) : view === "files" ? (
 				<SearchPanel
 					cwd={repo.cwd}
-					onOpen={(path, line) => onOpenFile(repo.cwd, path, line)}
+					onOpen={(path, line, ranges) =>
+						onOpenFile(repo.cwd, path, line, ranges)
+					}
 				>
 					<FileExplorer
 						tree={repo.tree}

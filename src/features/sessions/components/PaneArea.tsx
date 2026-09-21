@@ -322,6 +322,7 @@ export function PaneArea({
 						dir={active.dir}
 						path={active.path}
 						line={active.line}
+						ranges={active.ranges}
 						repo={repo}
 						reviewOf={reviewOf}
 						onReview={onReview}
@@ -532,6 +533,7 @@ function FileBody({
 	dir,
 	path,
 	line,
+	ranges,
 	repo,
 	reviewOf,
 	onReview,
@@ -540,6 +542,9 @@ function FileBody({
 	path: string;
 	/** Where to land, when whoever opened it knew — a search result does. */
 	line?: number;
+	/** Where on that line the query matched, so the file opens with the same
+	 *  spans lit as the result that led here. */
+	ranges?: [number, number][];
 	repo: RepoSnapshot | null;
 	reviewOf: (file: string) => ReviewState;
 	onReview: (file: string, state: ReviewState) => void;
@@ -641,7 +646,12 @@ function FileBody({
 				) : asDiff ? (
 					rows && <DiffView rows={rows} />
 				) : (
-					source && <SourceView lines={source} />
+					source && (
+						<SourceView
+							lines={source}
+							mark={line ? { line, ranges: ranges ?? [] } : undefined}
+						/>
+					)
 				)}
 			</div>
 		</>

@@ -165,14 +165,28 @@ export function useSessions() {
 	);
 
 	const openFile = useCallback(
-		(sessionId: string, dir: string, path: string, line?: number) => {
+		(
+			sessionId: string,
+			dir: string,
+			path: string,
+			line?: number,
+			ranges?: [number, number][],
+		) => {
 			const session = sessions.find((item) => item.id === sessionId);
 			if (!session) return;
 			// The line is not part of the id: one file is one tab, and opening it
 			// again at another line moves that tab rather than making a second.
 			openIn(
 				session.projectId,
-				{ kind: "file", id: `file:${dir}/${path}`, sessionId, dir, path, line },
+				{
+					kind: "file",
+					id: `file:${dir}/${path}`,
+					sessionId,
+					dir,
+					path,
+					line,
+					ranges,
+				},
 				sessionId,
 			);
 		},

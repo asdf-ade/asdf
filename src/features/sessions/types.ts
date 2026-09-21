@@ -54,6 +54,9 @@ export type Pane =
 			path: string;
 			/** Where to open it, when something knew — a search result does. */
 			line?: number;
+			/** Where on that line the query matched, lit the way the result that
+			 *  led here was. */
+			ranges?: [number, number][];
 	  }
 	/** A live browser an agent drives. It belongs to the workspace, not to any
 	 *  one terminal: agents come and go, and a page being read outlasts the
