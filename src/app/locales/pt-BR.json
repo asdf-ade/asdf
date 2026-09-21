@@ -107,7 +107,8 @@
 			"none": "Nenhum resultado.",
 			"count": "{{matches}} resultados em {{files}} arquivos",
 			"cappedCount": "Primeiros {{matches}} resultados em {{files}} arquivos",
-			"toggleGlobs": "Mostrar detalhes da busca"
+			"toggleGlobs": "Mostrar detalhes da busca",
+			"names": "Nomes de arquivo"
 		},
 		"pane": {
 			"close": "Fechar janela",

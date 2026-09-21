@@ -83,6 +83,11 @@ export type SearchResult = {
 	/** True when the search stopped counting; the panel says so rather than
 	 *  reporting a total it does not have. */
 	capped: boolean;
+	/** The files the query names rather than the ones it is written in, listed
+	 *  above them: knowing the file you want by name is the ordinary case. */
+	names: string[];
+	/** True when the name list was cut short, as `capped` is for the matches. */
+	namesCapped: boolean;
 };
 
 /** Emitted for every chunk a session prints. */

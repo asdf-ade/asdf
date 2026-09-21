@@ -107,7 +107,8 @@
 			"none": "결과가 없습니다.",
 			"count": "{{files}}개 파일에서 {{matches}}건",
 			"cappedCount": "{{files}}개 파일에서 처음 {{matches}}건",
-			"toggleGlobs": "검색 옵션 펼치기"
+			"toggleGlobs": "검색 옵션 펼치기",
+			"names": "파일 이름"
 		},
 		"pane": {
 			"close": "창 닫기",

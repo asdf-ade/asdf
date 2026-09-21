@@ -30,9 +30,10 @@ type State =
  * how it is read, the globs that narrow where it looks, and the answers grouped
  * under the files they came from.
  *
- * It searches contents, not names. A name is not what anyone is looking for
- * when they open this — they are looking for where something is written — and
- * a name search is this search with the file list as its corpus.
+ * One query, two answers: the files the query names, and the lines it is
+ * written in. Names come first and in their own section, because a name is a
+ * whole answer where a line is a place to look, and because a section is a
+ * thing you can read past when it is not what you meant.
  */
 export function SearchPanel({
 	cwd,
@@ -93,8 +94,11 @@ export function SearchPanel({
 
 	const summary = useMemo(() => {
 		if (state.status !== "done") return null;
-		const { matches, files, capped } = state.result;
-		if (matches === 0) return t("session.search.none");
+		const { matches, files, capped, names } = state.result;
+		// A query that names a file and appears in none of them has found
+		// something, so "no results" would be the panel disagreeing with itself.
+		if (matches === 0)
+			return names.length === 0 ? t("session.search.none") : null;
 		return t(capped ? "session.search.cappedCount" : "session.search.count", {
 			matches,
 			files: files.length,
@@ -198,65 +202,100 @@ export function SearchPanel({
 					<Note>{t("session.search.searching")}</Note>
 				) : state.status === "failed" ? (
 					<Note>{state.reason}</Note>
-				) : state.result.files.length === 0 ? null : (
-					<ul>
-						{state.result.files.map((file) => {
-							const open = !folded.has(file.path);
-							return (
-								<li key={file.path}>
-									<button
-										type="button"
-										aria-expanded={open}
-										onClick={() =>
-											setFolded((previous) => {
-												const next = new Set(previous);
-												if (!next.delete(file.path)) next.add(file.path);
-												return next;
-											})
-										}
-										className="flex w-full items-center gap-1.5 rounded-md px-1 py-1 text-left text-xs hover:bg-accent/60"
-									>
-										{open ? (
-											<ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-										) : (
-											<ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
-										)}
-										<FileIcon className="size-3.5 shrink-0 text-muted-foreground" />
-										{/* The name reads first and the folder behind it is the
-										    thing that tells two of the same name apart. */}
-										<span className="truncate">{baseName(file.path)}</span>
-										<span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">
-											{dirName(file.path)}
-										</span>
-										<span className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] text-muted-foreground tabular-nums">
-											{file.lines.length}
-										</span>
-									</button>
-
-									{open && (
-										<ul>
-											{file.lines.map((line) => (
-												<li key={`${file.path}:${line.number}`}>
-													<button
-														type="button"
-														onClick={() => onOpen(file.path, line.number)}
-														className="flex w-full items-start gap-2 rounded-md py-0.5 pr-2 pl-7 text-left hover:bg-accent/60"
-													>
-														<span className="w-8 shrink-0 text-right text-[10px] text-muted-foreground tabular-nums">
-															{line.number}
-														</span>
-														<span className="min-w-0 flex-1 truncate font-mono text-[11px]">
-															<Highlighted line={line} />
-														</span>
-													</button>
-												</li>
-											))}
-										</ul>
-									)}
+				) : (
+					<>
+						{state.result.names.length > 0 && (
+							<ul className="mb-1">
+								<li className="flex items-center gap-1.5 px-1 py-1 text-[10px] text-muted-foreground uppercase tracking-wide">
+									<span className="min-w-0 flex-1 truncate">
+										{t("session.search.names")}
+									</span>
+									{/* The count says when the list was cut the way the summary
+									    line does for the matches: a plus, not a footnote. */}
+									<span className="shrink-0 rounded-full bg-muted px-1.5 tabular-nums">
+										{state.result.names.length}
+										{state.result.namesCapped ? "+" : ""}
+									</span>
 								</li>
-							);
-						})}
-					</ul>
+								{state.result.names.map((path) => (
+									<li key={path}>
+										<button
+											type="button"
+											title={path}
+											// A name is a whole answer, so it opens the file at its
+											// top rather than at a line nothing pointed to.
+											onClick={() => onOpen(path, 1)}
+											className="flex w-full items-center gap-1.5 rounded-md py-1 pr-2 pl-1 text-left text-xs hover:bg-accent/60"
+										>
+											<FileIcon className="size-3.5 shrink-0 text-muted-foreground" />
+											<span className="truncate">{baseName(path)}</span>
+											<span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">
+												{dirName(path)}
+											</span>
+										</button>
+									</li>
+								))}
+							</ul>
+						)}
+						<ul>
+							{state.result.files.map((file) => {
+								const open = !folded.has(file.path);
+								return (
+									<li key={file.path}>
+										<button
+											type="button"
+											aria-expanded={open}
+											onClick={() =>
+												setFolded((previous) => {
+													const next = new Set(previous);
+													if (!next.delete(file.path)) next.add(file.path);
+													return next;
+												})
+											}
+											className="flex w-full items-center gap-1.5 rounded-md px-1 py-1 text-left text-xs hover:bg-accent/60"
+										>
+											{open ? (
+												<ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+											) : (
+												<ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+											)}
+											<FileIcon className="size-3.5 shrink-0 text-muted-foreground" />
+											{/* The name reads first and the folder behind it is the
+										    thing that tells two of the same name apart. */}
+											<span className="truncate">{baseName(file.path)}</span>
+											<span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">
+												{dirName(file.path)}
+											</span>
+											<span className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] text-muted-foreground tabular-nums">
+												{file.lines.length}
+											</span>
+										</button>
+
+										{open && (
+											<ul>
+												{file.lines.map((line) => (
+													<li key={`${file.path}:${line.number}`}>
+														<button
+															type="button"
+															onClick={() => onOpen(file.path, line.number)}
+															className="flex w-full items-start gap-2 rounded-md py-0.5 pr-2 pl-7 text-left hover:bg-accent/60"
+														>
+															<span className="w-8 shrink-0 text-right text-[10px] text-muted-foreground tabular-nums">
+																{line.number}
+															</span>
+															<span className="min-w-0 flex-1 truncate font-mono text-[11px]">
+																<Highlighted line={line} />
+															</span>
+														</button>
+													</li>
+												))}
+											</ul>
+										)}
+									</li>
+								);
+							})}
+						</ul>
+					</>
 				)}
 			</div>
 		</div>
