@@ -117,9 +117,7 @@
 		"newTab": {
 			"title": "Nueva pestaña",
 			"terminal": "Terminal",
-			"terminalHint": "Otra sesión en este espacio de trabajo, con su propio shell",
-			"browser": "Navegador",
-			"browserHint": "Una página que tu agente puede manejar"
+			"browser": "Navegador"
 		},
 		"sidePanel": "Panel del proyecto",
 		"newWorkspace": "Nuevo espacio de trabajo",

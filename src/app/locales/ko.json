@@ -117,9 +117,7 @@
 		"newTab": {
 			"title": "새 탭",
 			"terminal": "터미널",
-			"terminalHint": "이 워크스페이스에 세션을 하나 더. 자기 셸을 가진다",
-			"browser": "브라우저",
-			"browserHint": "에이전트가 조작할 수 있는 페이지"
+			"browser": "브라우저"
 		},
 		"sidePanel": "프로젝트 패널",
 		"newWorkspace": "새 워크스페이스",
