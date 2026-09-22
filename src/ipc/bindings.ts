@@ -91,6 +91,10 @@ export type SearchResult = {
 	namesCapped: boolean;
 };
 
+/** A coding agent the machine has: what to call it, and what starts it. The
+ *  name is the product's own, so it reads the same in every locale. */
+export type Agent = { id: string; name: string; command: string };
+
 /** Emitted for every chunk a session prints. */
 export const TERMINAL_OUTPUT_EVENT = "terminal://output";
 

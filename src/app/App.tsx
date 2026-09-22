@@ -15,7 +15,7 @@ import { PaneArea } from "@/features/sessions/components/PaneArea";
 import { SessionSidebar } from "@/features/sessions/components/SessionSidebar";
 import { SidePanel } from "@/features/sessions/components/SidePanel";
 import type { Layout } from "@/features/sessions/panes";
-import type { Session, TabKind } from "@/features/sessions/types";
+import type { Agent, Session, TabKind } from "@/features/sessions/types";
 import { useRepo } from "@/features/sessions/use-repo";
 import { useSessionStatus } from "@/features/sessions/use-session-status";
 import { useSessions } from "@/features/sessions/use-sessions";
@@ -198,6 +198,12 @@ export function App() {
 		void ipc.keepAwake(keepAwake);
 	}, [keepAwake]);
 	const [dragging, setDragging] = useState(false);
+	// The coding agents this machine has. Asked for once — the main process
+	// looked while the window was opening — so "+" never waits on it.
+	const [agents, setAgents] = useState<Agent[]>([]);
+	useEffect(() => {
+		void ipc.agents().then((found) => found.ok && setAgents(found.value));
+	}, []);
 	// Whether the "+" menu is up. It hangs over the pane area, where a browser
 	// pane is a native view that would draw in front of it.
 	const [tabMenu, setTabMenu] = useState(false);
@@ -292,8 +298,15 @@ export function App() {
 	// Sessions are numbered within their workspace, the way a shell numbers its
 	// own windows, so a name is never asked for. Written here rather than kept
 	// on the session, so switching language renames them.
+	// A session started as an agent is called after it: "Claude Code 2" says
+	// what is in that window where "terminal 2" says only that it is one.
 	const sessionTitle = (session: Session) =>
-		t("session.terminalTitle", { n: session.ordinal });
+		session.agent
+			? t("session.agentTitle", {
+					name: session.agent.name,
+					n: session.ordinal,
+				})
+			: t("session.terminalTitle", { n: session.ordinal });
 
 	/**
 	 * Gives a workspace the folder the OS picker answers with.
@@ -452,7 +465,13 @@ export function App() {
 									onFocusGroup={() => sessions.focusGroup(group.id)}
 									onFocus={sessions.focusPane}
 									onClose={sessions.closePane}
+									agents={agents}
 									onNewTabMenu={setTabMenu}
+									onNewAgent={(agent) => {
+										if (!sessions.activeProject) return newWorkspace();
+										sessions.focusGroup(group.id);
+										sessions.createSession(sessions.activeProjectId, agent);
+									}}
 									onNewTab={(kind) => {
 										if (!sessions.activeProject) return newWorkspace();
 										openTab(kind, group.id);
@@ -471,6 +490,7 @@ export function App() {
 									renderAgent={(session) => (
 										<TerminalPane
 											cwd={folderOf(session.projectId)}
+											startup={session.agent?.command}
 											onSession={(id) => bindPty(session.id, id)}
 										/>
 									)}

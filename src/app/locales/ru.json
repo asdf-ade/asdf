@@ -123,6 +123,7 @@
 		"newWorkspace": "Новое рабочее пространство",
 		"workspaces": "Рабочие пространства",
 		"terminalTitle": "Терминал {{n}}",
+		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "Убрать рабочее пространство",
 		"workspace": {
 			"namePlaceholder": "web",

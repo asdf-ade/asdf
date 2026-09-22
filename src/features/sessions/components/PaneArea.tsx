@@ -6,6 +6,7 @@ import {
 	Globe,
 	type LucideIcon,
 	Plus,
+	Sparkles,
 	SquareTerminal,
 	Undo2,
 	X,
@@ -24,12 +25,14 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ipc } from "@/ipc/client";
 import { cn } from "@/lib/utils";
 import type { DropTarget, Side } from "../panes";
 import type {
+	Agent,
 	DiffRow,
 	Issue,
 	Pane,
@@ -121,8 +124,14 @@ type Props = {
 	onFocusGroup: () => void;
 	onFocus: (id: string) => void;
 	onClose: (id: string) => void;
+	/** The coding agents this machine has, listed in `+` above the plain
+	 *  terminal. Empty until the main process has looked, and empty for a
+	 *  machine with none. */
+	agents: Agent[];
 	/** `+`: what its menu was asked for. */
 	onNewTab: (kind: TabKind) => void;
+	/** `+`: one of the agents above, which starts a session running it. */
+	onNewAgent: (agent: Agent) => void;
 	/** Whether that menu is up. It hangs below the strip, over where a browser
 	 *  pane draws, and a native view would be in front of it. */
 	onNewTabMenu: (open: boolean) => void;
@@ -165,7 +174,9 @@ export function PaneArea({
 	onFocusGroup,
 	onFocus,
 	onClose,
+	agents,
 	onNewTab,
+	onNewAgent,
 	onNewTabMenu,
 	onNewTerminal,
 	dragging,
@@ -326,6 +337,19 @@ export function PaneArea({
 						}
 					/>
 					<DropdownMenuContent align="start">
+						{/* The agents first: running one is what the app is for, and a
+						    plain terminal is the fallback rather than the default. */}
+						{agents.map((agent) => (
+							<DropdownMenuItem
+								key={agent.id}
+								onClick={() => onNewAgent(agent)}
+								className="text-xs"
+							>
+								<Sparkles className="size-3.5" />
+								{agent.name}
+							</DropdownMenuItem>
+						))}
+						{agents.length > 0 && <DropdownMenuSeparator />}
 						{TAB_KINDS.map(({ kind, icon: Icon }) => (
 							<DropdownMenuItem
 								key={kind}

@@ -1,4 +1,7 @@
+import type { Agent } from "@/ipc/bindings";
+
 export type {
+	Agent,
 	ChangedFile,
 	DiffRow,
 	FileNode,
@@ -26,6 +29,9 @@ export type Session = {
 	ordinal: number;
 	/** The workspace this session belongs to. */
 	projectId: string;
+	/** The agent it was started as, when it was started as one. It names the
+	 *  session and is what its shell runs first. */
+	agent?: Agent;
 };
 
 /**
