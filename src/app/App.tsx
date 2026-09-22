@@ -15,7 +15,7 @@ import { PaneArea } from "@/features/sessions/components/PaneArea";
 import { SessionSidebar } from "@/features/sessions/components/SessionSidebar";
 import { SidePanel } from "@/features/sessions/components/SidePanel";
 import type { Layout } from "@/features/sessions/panes";
-import type { Session } from "@/features/sessions/types";
+import type { Session, TabKind } from "@/features/sessions/types";
 import { useRepo } from "@/features/sessions/use-repo";
 import { useSessionStatus } from "@/features/sessions/use-session-status";
 import { useSessions } from "@/features/sessions/use-sessions";
@@ -28,7 +28,6 @@ import { ipc } from "@/ipc/client";
 import { platform } from "@/ipc/platform";
 import { cn } from "@/lib/utils";
 import { CloneRepoDialog } from "./CloneRepoDialog";
-import { NewTabDialog, type TabKind } from "./NewTabDialog";
 import {
 	SettingsBody,
 	SettingsNav,
@@ -199,6 +198,9 @@ export function App() {
 		void ipc.keepAwake(keepAwake);
 	}, [keepAwake]);
 	const [dragging, setDragging] = useState(false);
+	// Whether the "+" menu is up. It hangs over the pane area, where a browser
+	// pane is a native view that would draw in front of it.
+	const [tabMenu, setTabMenu] = useState(false);
 	// Which pty sits behind each terminal tab, so the panel can ask the OS
 	// where that shell is. The tab on screen decides what the panel shows.
 	const [ptys, setPtys] = useState<Record<string, number>>({});
@@ -221,9 +223,6 @@ export function App() {
 	);
 	const [sidebarOpen, setSidebarOpen] = useState(true);
 	const [panelOpen, setPanelOpen] = useState(true);
-	// Which group asked "+", so the answer opens there and not wherever focus
-	// drifted while the dialog was up. Null when nothing is asking.
-	const [newTabIn, setNewTabIn] = useState<string | null>(null);
 	// What each browser tab is called, reported by the pane as its page
 	// changes; the strip has no other way to know a native view's title.
 	const [browserTitles, setBrowserTitles] = useState<Record<number, string>>(
@@ -237,8 +236,7 @@ export function App() {
 	// every dialog and takes the pointer that was meant for one. The same is
 	// true of a tab in the air, whose drop zones are DOM underneath. Both are
 	// answered by putting the views away until the thing on top is done with.
-	const overlay =
-		dragging || cloningInto !== null || updater.open || newTabIn !== null;
+	const overlay = dragging || tabMenu || cloningInto !== null || updater.open;
 	useEffect(() => {
 		void ipc.browserCover(overlay);
 	}, [overlay]);
@@ -327,13 +325,13 @@ export function App() {
 		onOpen: sessions.openSession,
 	});
 
-	// What "+" resolves to once the dialog answers. A terminal is a session, so
-	// asking for one opens another window of the same workspace rather than a
-	// second terminal in this one.
-	const openTab = (kind: TabKind) => {
+	// What the "+" menu resolves to. A terminal is a session, so asking for one
+	// opens another window of the same workspace rather than a second terminal
+	// in this one.
+	const openTab = (kind: TabKind, groupId: string) => {
 		const projectId = sessions.activeProjectId;
 		if (!projectId) return;
-		if (newTabIn) sessions.focusGroup(newTabIn);
+		sessions.focusGroup(groupId);
 		if (kind === "terminal") {
 			sessions.createSession(projectId);
 			return;
@@ -454,9 +452,10 @@ export function App() {
 									onFocusGroup={() => sessions.focusGroup(group.id)}
 									onFocus={sessions.focusPane}
 									onClose={sessions.closePane}
-									onNewTab={() => {
+									onNewTabMenu={setTabMenu}
+									onNewTab={(kind) => {
 										if (!sessions.activeProject) return newWorkspace();
-										setNewTabIn(group.id);
+										openTab(kind, group.id);
 									}}
 									onNewTerminal={() => {
 										if (!sessions.activeProject) return newWorkspace();
@@ -636,12 +635,6 @@ export function App() {
 				onCloned={(path) =>
 					cloningInto && sessions.setWorkspacePath(cloningInto, path)
 				}
-			/>
-
-			<NewTabDialog
-				open={newTabIn !== null}
-				onOpenChange={(open) => !open && setNewTabIn(null)}
-				onPick={openTab}
 			/>
 
 			<UpdateDialog

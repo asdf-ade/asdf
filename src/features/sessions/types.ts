@@ -42,6 +42,10 @@ export type Project = {
 	path: string | null;
 };
 
+/** What `+` can open. Adding one is a row in its menu, which is the point of
+ *  it being a menu. */
+export type TabKind = "terminal" | "browser";
+
 /** A tab. Files belong to a terminal, whose folder they were opened from;
  *  issues and pull requests belong to the repository the terminal was in. */
 export type Pane =
