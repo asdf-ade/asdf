@@ -123,6 +123,7 @@
 		"newWorkspace": "新建工作区",
 		"workspaces": "工作区",
 		"terminalTitle": "终端 {{n}}",
+		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "移除工作区",
 		"workspace": {
 			"namePlaceholder": "web",

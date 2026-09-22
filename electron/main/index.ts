@@ -22,6 +22,7 @@ import {
 	WINDOW_CLOSE_REQUESTED_EVENT,
 } from "@/ipc/bindings";
 import { Activity } from "./activity";
+import { detect, onPath } from "./agents";
 import { Browsers } from "./browser";
 import { clone } from "./git";
 import * as repo from "./repo";
@@ -292,6 +293,11 @@ ipcMain.handle(
 		}: { cwd: string; query: string; options: SearchOptions },
 	) => search(cwd, query, options),
 );
+// Looked up once, while the window is still opening, so the "+" menu never
+// waits on five processes to say what it can start.
+const agents = detect(onPath);
+ipcMain.handle("agents://list", () => agents.then(ok));
+
 ipcMain.handle("repo://issues", (_event, { cwd }: { cwd: string }) =>
 	repo.issues(cwd),
 );

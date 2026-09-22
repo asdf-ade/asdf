@@ -1,4 +1,5 @@
 import type {
+	Agent,
 	AppError,
 	BrowserEndpoint,
 	BrowserInfo,
@@ -72,6 +73,8 @@ export const ipc = {
 	/** Text in the files under `cwd`, found with `git grep`. */
 	repoSearch: (cwd: string, query: string, options: SearchOptions) =>
 		call<SearchResult>("repo://search", { cwd, query, options }),
+	/** The coding agents installed on this machine, found once at startup. */
+	agents: () => call<Agent[]>("agents://list"),
 	repoIssues: (cwd: string) => call<Issue[]>("repo://issues", { cwd }),
 	repoPulls: (cwd: string) => call<PullRequest[]>("repo://pulls", { cwd }),
 

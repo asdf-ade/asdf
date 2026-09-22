@@ -123,6 +123,7 @@
 		"newWorkspace": "새 워크스페이스",
 		"workspaces": "워크스페이스",
 		"terminalTitle": "터미널 {{n}}",
+		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "워크스페이스 제거",
 		"workspace": {
 			"namePlaceholder": "web",
