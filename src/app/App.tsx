@@ -14,7 +14,7 @@ import { BrowserPane } from "@/features/browser/components/BrowserPane";
 import { PaneArea } from "@/features/sessions/components/PaneArea";
 import { SessionSidebar } from "@/features/sessions/components/SessionSidebar";
 import { SidePanel } from "@/features/sessions/components/SidePanel";
-import type { Layout } from "@/features/sessions/panes";
+import { type Layout, topRight } from "@/features/sessions/panes";
 import type { Agent, Session, TabKind } from "@/features/sessions/types";
 import { useRepo } from "@/features/sessions/use-repo";
 import { useSessionStatus } from "@/features/sessions/use-session-status";
@@ -449,7 +449,10 @@ export function App() {
 							if (!group) return null;
 							const order = sessions.groupOrder;
 							const first = order[0] === group.id;
-							const last = order[order.length - 1] === group.id;
+							// The window's own buttons, which belong in its top right
+							// corner rather than at the end of the layout — after a split
+							// top and bottom those are not the same strip.
+							const last = topRight(sessions.layout) === group.id;
 							return (
 								<PaneArea
 									panes={group.panes}
