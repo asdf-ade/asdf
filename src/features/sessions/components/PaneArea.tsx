@@ -325,9 +325,13 @@ export function PaneArea({
 							</Button>
 						}
 					/>
-					<DropdownMenuContent align="start" className="w-44">
+					<DropdownMenuContent align="start">
 						{TAB_KINDS.map(({ kind, icon: Icon }) => (
-							<DropdownMenuItem key={kind} onClick={() => onNewTab(kind)}>
+							<DropdownMenuItem
+								key={kind}
+								onClick={() => onNewTab(kind)}
+								className="text-xs"
+							>
 								<Icon className="size-3.5" />
 								{t(`session.newTab.${kind}`)}
 							</DropdownMenuItem>

@@ -230,20 +230,25 @@ export function SessionSidebar({
 											</Button>
 										}
 									/>
-									<DropdownMenuContent align="end" className="w-52">
+									<DropdownMenuContent align="end" className="w-48">
 										<DropdownMenuItem
 											onClick={() => onChooseFolder(project.id)}
+											className="text-xs"
 										>
 											<FolderOpen className="size-3.5" />
 											{t("session.workspace.chooseFolder")}
 										</DropdownMenuItem>
-										<DropdownMenuItem onClick={() => onCloneInto(project.id)}>
+										<DropdownMenuItem
+											onClick={() => onCloneInto(project.id)}
+											className="text-xs"
+										>
 											<GitBranch className="size-3.5" />
 											{t("session.workspace.cloneRepo")}
 										</DropdownMenuItem>
 										{project.path && (
 											<DropdownMenuItem
 												onClick={() => onClearFolder(project.id)}
+												className="text-xs"
 											>
 												<Unlink className="size-3.5" />
 												{t("session.workspace.clearFolder")}
@@ -253,6 +258,7 @@ export function SessionSidebar({
 										<DropdownMenuItem
 											variant="destructive"
 											onClick={() => onRemoveWorkspace(project.id)}
+											className="text-xs"
 										>
 											<X className="size-3.5" />
 											{t("session.removeWorkspace")}
