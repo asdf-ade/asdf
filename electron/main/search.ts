@@ -15,6 +15,9 @@ const run = promisify(execFile);
  *  over a large repository is a walk of the whole tree into the renderer. */
 const MAX_MATCHES = 2000;
 const MAX_FILES = 500;
+/** How many names come back. A name result is one row, and a list longer than
+ *  a panelful is not read — it is narrowed by typing more. */
+const MAX_NAMES = 50;
 
 /**
  * The arguments `git grep` takes for one set of options.
@@ -64,31 +67,41 @@ export function includePaths(include: string): string[] {
 }
 
 /**
+ * The query as a JavaScript regular expression, under the options as typed.
+ *
+ * Null when the two dialects disagree — git's pattern is not JavaScript's, and
+ * a pattern this cannot read is still a pattern git ran.
+ */
+function matcher(query: string, options: SearchOptions): RegExp | null {
+	try {
+		const source = options.regex
+			? query
+			: query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+		return new RegExp(
+			options.wholeWord ? `\\b(?:${source})\\b` : source,
+			options.matchCase ? "" : "i",
+		);
+	} catch {
+		return null;
+	}
+}
+
+/**
  * Where in a line the matches are, for lighting them up.
  *
  * Worked out here rather than asked of git, which reports where a match starts
- * and never how long it is. The pattern is rebuilt as a JavaScript regular
- * expression under the same options; where the two dialects disagree the line
- * simply comes back with no highlight, which is a worse result than the right
- * one and a much better one than the wrong one.
+ * and never how long it is. Where the pattern cannot be read as JavaScript the
+ * line simply comes back with no highlight, which is a worse result than the
+ * right one and a much better one than the wrong one.
  */
 export function rangesIn(
 	text: string,
 	query: string,
 	options: SearchOptions,
 ): [number, number][] {
-	let pattern: RegExp;
-	try {
-		const source = options.regex
-			? query
-			: query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-		pattern = new RegExp(
-			options.wholeWord ? `\\b(?:${source})\\b` : source,
-			options.matchCase ? "g" : "gi",
-		);
-	} catch {
-		return [];
-	}
+	const read = matcher(query, options);
+	if (!read) return [];
+	const pattern = new RegExp(read.source, `${read.flags}g`);
 
 	const found: [number, number][] = [];
 	for (const match of text.matchAll(pattern)) {
@@ -153,22 +166,116 @@ export function parseGrep(
 		matches += 1;
 	}
 
-	return { files, matches, capped };
+	return { files, matches, capped, names: [], namesCapped: false };
 }
 
 /**
- * Searches the files under `cwd`.
+ * The paths from `git ls-files -z` whose name the query matches.
  *
- * Outside a repository there is no `git grep` to run, and the caller is told
- * that rather than handed an empty result — "nothing matched" and "nothing was
- * searched" are different answers and look the same.
+ * The same pattern the content search ran, read against the path rather than
+ * against a line: a person who turns on "match case" means it for both halves,
+ * and a regular expression is as good a way to name a file as any.
+ */
+export function pickNames(
+	stdout: string,
+	query: string,
+	options: SearchOptions,
+): Pick<SearchResult, "names" | "namesCapped"> {
+	const pattern = matcher(query, options);
+	if (!pattern) return { names: [], namesCapped: false };
+
+	const names: SearchResult["names"] = [];
+	// `--cached --others` lists a file that is both tracked and modified once,
+	// but a path can still arrive twice; a name is one row whatever git says.
+	for (const path of new Set(stdout.split("\0"))) {
+		if (!path || !pattern.test(path)) continue;
+		if (names.length >= MAX_NAMES) return { names, namesCapped: true };
+		// Where in the path it matched, for the same highlight the lines get.
+		names.push({ path, ranges: rangesIn(path, query, options) });
+	}
+	return { names, namesCapped: false };
+}
+
+const nothing: SearchResult = {
+	files: [],
+	matches: 0,
+	capped: false,
+	names: [],
+	namesCapped: false,
+};
+
+/**
+ * Searches the files under `cwd`: what is written in them, and what they are
+ * called. One query, two answers, because knowing the file you want by name is
+ * the ordinary case and it is the same typing either way.
  */
 export async function search(
 	cwd: string,
 	query: string,
 	options: SearchOptions,
 ): Promise<IpcResult<SearchResult>> {
-	if (!query) return ok({ files: [], matches: 0, capped: false });
+	if (!query) return ok(nothing);
+	const [found, named] = await Promise.all([
+		contents(cwd, query, options),
+		names(cwd, query, options),
+	]);
+	// A failure has something to say and the names cannot make up for it: a
+	// folder that is not a repository has neither half to give.
+	if (!found.ok) return found;
+	return ok({ ...found.value, ...named });
+}
+
+/**
+ * The names git knows, which is the repository's own list rather than the side
+ * panel's tree — that one stops at 1500 entries and four levels down, and the
+ * file you cannot find by eye is usually the one past that.
+ *
+ * `--others --exclude-standard` is the same stance the content search takes
+ * with `--untracked`: the file someone just wrote counts, the ignored one does
+ * not. A folder that is no repository answers with nothing rather than a
+ * failure; the content search is already saying what is wrong.
+ */
+async function names(
+	cwd: string,
+	query: string,
+	options: SearchOptions,
+): Promise<Pick<SearchResult, "names" | "namesCapped">> {
+	try {
+		const { stdout } = await run(
+			"git",
+			[
+				"ls-files",
+				"--cached",
+				"--others",
+				"--exclude-standard",
+				"-z",
+				"--",
+				...includePaths(options.include),
+			],
+			{
+				cwd,
+				maxBuffer: 64 * 1024 * 1024,
+				env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
+			},
+		);
+		return pickNames(stdout, query, options);
+	} catch {
+		return { names: [], namesCapped: false };
+	}
+}
+
+/**
+ * What is written in the files under `cwd`.
+ *
+ * Outside a repository there is no `git grep` to run, and the caller is told
+ * that rather than handed an empty result — "nothing matched" and "nothing was
+ * searched" are different answers and look the same.
+ */
+async function contents(
+	cwd: string,
+	query: string,
+	options: SearchOptions,
+): Promise<IpcResult<SearchResult>> {
 	try {
 		const { stdout } = await run("git", grepArgs(query, options), {
 			cwd,
@@ -186,7 +293,7 @@ export async function search(
 			"code" in thrown &&
 			thrown.code === 1
 		)
-			return ok({ files: [], matches: 0, capped: false });
+			return ok(nothing);
 		return fail(searchError(thrown));
 	}
 }

@@ -105,9 +105,9 @@
 			"regex": "正規表現を使う",
 			"searching": "検索中…",
 			"none": "結果がありません。",
-			"count": "{{files}} 個のファイルに {{matches}} 件",
-			"cappedCount": "{{files}} 個のファイルの最初の {{matches}} 件",
-			"toggleGlobs": "検索オプションの表示"
+			"toggleGlobs": "検索オプションの表示",
+			"names": "ファイル名",
+			"contents": "ファイル内容"
 		},
 		"pane": {
 			"close": "ウィンドウを閉じる",
@@ -117,14 +117,13 @@
 		"newTab": {
 			"title": "新しいタブ",
 			"terminal": "ターミナル",
-			"terminalHint": "このワークスペースにもう一つのセッション。自分のシェルを持つ",
-			"browser": "ブラウザ",
-			"browserHint": "エージェントが操作できるページ"
+			"browser": "ブラウザ"
 		},
 		"sidePanel": "プロジェクトパネル",
 		"newWorkspace": "新しいワークスペース",
 		"workspaces": "ワークスペース",
 		"terminalTitle": "ターミナル {{n}}",
+		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "ワークスペースを削除",
 		"workspace": {
 			"namePlaceholder": "web",
@@ -141,6 +140,14 @@
 			"cancel": "キャンセル",
 			"clone": "クローン",
 			"cloning": "クローン中…"
+		},
+		"status": {
+			"idle": "完了",
+			"busy": "作業中",
+			"done": "完了 · 未確認"
+		},
+		"notify": {
+			"finished": "作業が完了しました。"
 		}
 	},
 	"settings": {
@@ -153,7 +160,14 @@
 			"dark": "ダーク"
 		},
 		"language": "言語",
-		"close": "閉じる"
+		"sections": {
+			"appearance": "テーマ",
+			"language": "言語",
+			"power": "スリープ防止"
+		},
+		"back": "戻る",
+		"keepAwake": "エージェントの作業中はスリープさせない",
+		"keepAwakeHint": "作業中のセッションがある間はスリープしません。"
 	},
 	"github": {
 		"issues": "イシュー",

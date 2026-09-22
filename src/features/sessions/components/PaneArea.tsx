@@ -6,6 +6,8 @@ import {
 	Globe,
 	type LucideIcon,
 	Plus,
+	Sparkles,
+	SquareTerminal,
 	Undo2,
 	X,
 } from "lucide-react";
@@ -19,10 +21,19 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ipc } from "@/ipc/client";
 import { cn } from "@/lib/utils";
+import { AgentIcon } from "../agent-icon";
 import type { DropTarget, Side } from "../panes";
 import type {
+	Agent,
 	DiffRow,
 	Issue,
 	Pane,
@@ -30,11 +41,19 @@ import type {
 	RepoSnapshot,
 	ReviewState,
 	Session,
+	TabKind,
 } from "../types";
 import { DiffView, LINE_HEIGHT, SourceView } from "./CodeView";
 
 /** The dataTransfer type a dragged tab travels as. */
 const PANE_MIME = "application/x-asdf-pane";
+
+/** What `+` offers, in the order it offers it. A row each, so #33's agents are
+ *  entries here rather than a wider dialog. */
+const TAB_KINDS: { kind: TabKind; icon: LucideIcon }[] = [
+	{ kind: "terminal", icon: SquareTerminal },
+	{ kind: "browser", icon: Globe },
+];
 
 // Only the tabs whose label is a bare number need saying what they are; a
 // terminal's or a file's name already does.
@@ -106,8 +125,17 @@ type Props = {
 	onFocusGroup: () => void;
 	onFocus: (id: string) => void;
 	onClose: (id: string) => void;
-	/** `+`: asks what the new tab should be. */
-	onNewTab: () => void;
+	/** The coding agents this machine has, listed in `+` above the plain
+	 *  terminal. Empty until the main process has looked, and empty for a
+	 *  machine with none. */
+	agents: Agent[];
+	/** `+`: what its menu was asked for. */
+	onNewTab: (kind: TabKind) => void;
+	/** `+`: one of the agents above, which starts a session running it. */
+	onNewAgent: (agent: Agent) => void;
+	/** Whether that menu is up. It hangs below the strip, over where a browser
+	 *  pane draws, and a native view would be in front of it. */
+	onNewTabMenu: (open: boolean) => void;
 	/** The empty window's button. It says "new terminal", so it makes one at
 	 *  once rather than asking what the tab should be. */
 	onNewTerminal: () => void;
@@ -147,7 +175,10 @@ export function PaneArea({
 	onFocusGroup,
 	onFocus,
 	onClose,
+	agents,
 	onNewTab,
+	onNewAgent,
+	onNewTabMenu,
 	onNewTerminal,
 	dragging,
 	onDragStart,
@@ -288,17 +319,55 @@ export function PaneArea({
 				))}
 				{at === panes.length && <Caret />}
 
-				{/* One control, whatever the tab turns out to be: it asks. */}
-				<Button
-					size="icon"
-					variant="ghost"
-					aria-label={t("session.newTab.title")}
-					title={t("session.newTab.title")}
-					onClick={onNewTab}
-					className="my-1.5 ml-1 size-6 shrink-0"
-				>
-					<Plus className="size-3.5" />
-				</Button>
+				{/* One control, whatever the tab turns out to be: it asks, in a menu
+				    under itself. A dialog for a two-way choice took the window, dimmed
+				    the work behind it and had to hide every browser pane while it was
+				    up — and the list is going to grow a row per installed agent. */}
+				<DropdownMenu onOpenChange={onNewTabMenu}>
+					<DropdownMenuTrigger
+						render={
+							<Button
+								size="icon"
+								variant="ghost"
+								aria-label={t("session.newTab.title")}
+								title={t("session.newTab.title")}
+								className="my-1.5 ml-1 size-6 shrink-0"
+							>
+								<Plus className="size-3.5" />
+							</Button>
+						}
+					/>
+					<DropdownMenuContent align="start">
+						{TAB_KINDS.map(({ kind, icon: Icon }) => (
+							<DropdownMenuItem
+								key={kind}
+								onClick={() => onNewTab(kind)}
+								className="text-xs"
+							>
+								<Icon className="size-3.5" />
+								{t(`session.newTab.${kind}`)}
+							</DropdownMenuItem>
+						))}
+						{/* The agents below the two kinds of tab, each under its own mark:
+						    which agents a machine has changes, and a list that grows is a
+						    list that belongs at the end. */}
+						{agents.length > 0 && <DropdownMenuSeparator />}
+						{agents.map((agent) => (
+							<DropdownMenuItem
+								key={agent.id}
+								onClick={() => onNewAgent(agent)}
+								className="text-xs"
+							>
+								<AgentIcon
+									id={agent.id}
+									className="size-3.5"
+									fallback={Sparkles}
+								/>
+								{agent.name}
+							</DropdownMenuItem>
+						))}
+					</DropdownMenuContent>
+				</DropdownMenu>
 				{trailing && <div className="ml-auto flex shrink-0">{trailing}</div>}
 			</div>
 
@@ -322,6 +391,7 @@ export function PaneArea({
 						dir={active.dir}
 						path={active.path}
 						line={active.line}
+						ranges={active.ranges}
 						repo={repo}
 						reviewOf={reviewOf}
 						onReview={onReview}
@@ -532,6 +602,7 @@ function FileBody({
 	dir,
 	path,
 	line,
+	ranges,
 	repo,
 	reviewOf,
 	onReview,
@@ -540,6 +611,9 @@ function FileBody({
 	path: string;
 	/** Where to land, when whoever opened it knew — a search result does. */
 	line?: number;
+	/** Where on that line the query matched, so the file opens with the same
+	 *  spans lit as the result that led here. */
+	ranges?: [number, number][];
 	repo: RepoSnapshot | null;
 	reviewOf: (file: string) => ReviewState;
 	onReview: (file: string, state: ReviewState) => void;
@@ -641,7 +715,12 @@ function FileBody({
 				) : asDiff ? (
 					rows && <DiffView rows={rows} />
 				) : (
-					source && <SourceView lines={source} />
+					source && (
+						<SourceView
+							lines={source}
+							mark={line ? { line, ranges: ranges ?? [] } : undefined}
+						/>
+					)
 				)}
 			</div>
 		</>

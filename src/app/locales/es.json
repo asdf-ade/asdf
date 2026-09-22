@@ -105,9 +105,9 @@
 			"regex": "Usar expresión regular",
 			"searching": "Buscando…",
 			"none": "Sin resultados.",
-			"count": "{{matches}} resultados en {{files}} archivos",
-			"cappedCount": "Primeros {{matches}} resultados en {{files}} archivos",
-			"toggleGlobs": "Mostrar detalles de búsqueda"
+			"toggleGlobs": "Mostrar detalles de búsqueda",
+			"names": "Nombres de archivo",
+			"contents": "Contenido de archivos"
 		},
 		"pane": {
 			"close": "Cerrar ventana",
@@ -117,14 +117,13 @@
 		"newTab": {
 			"title": "Nueva pestaña",
 			"terminal": "Terminal",
-			"terminalHint": "Otra sesión en este espacio de trabajo, con su propio shell",
-			"browser": "Navegador",
-			"browserHint": "Una página que tu agente puede manejar"
+			"browser": "Navegador"
 		},
 		"sidePanel": "Panel del proyecto",
 		"newWorkspace": "Nuevo espacio de trabajo",
 		"workspaces": "Espacios de trabajo",
 		"terminalTitle": "Terminal {{n}}",
+		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "Quitar espacio de trabajo",
 		"workspace": {
 			"namePlaceholder": "web",
@@ -141,6 +140,14 @@
 			"cancel": "Cancelar",
 			"clone": "Clonar",
 			"cloning": "Clonando…"
+		},
+		"status": {
+			"idle": "Terminado",
+			"busy": "Trabajando",
+			"done": "Terminado, sin abrir"
+		},
+		"notify": {
+			"finished": "El trabajo ha terminado."
 		}
 	},
 	"settings": {
@@ -153,7 +160,14 @@
 			"dark": "Oscuro"
 		},
 		"language": "Idioma",
-		"close": "Cerrar"
+		"sections": {
+			"appearance": "Tema",
+			"language": "Idioma",
+			"power": "Mantener activo"
+		},
+		"back": "Atrás",
+		"keepAwake": "Mantener el equipo despierto mientras un agente trabaja",
+		"keepAwakeHint": "El equipo no se suspenderá mientras alguna sesión esté trabajando."
 	},
 	"github": {
 		"issues": "Incidencias",

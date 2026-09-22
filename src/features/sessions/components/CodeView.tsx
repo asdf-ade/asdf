@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { cn } from "@/lib/utils";
 import type { DiffRow } from "../types";
 
@@ -74,15 +75,67 @@ function Side({
  *  same number is how they stop agreeing. */
 export const LINE_HEIGHT = 24;
 
+/** The line a search sent the reader to, and where on it the query matched. */
+export type Mark = { line: number; ranges: [number, number][] };
+
 // Two columns of text rather than one element per line: source lines have no
-// identity of their own, and nothing here needs to style a single one.
-export function SourceView({ lines }: { lines: string[] }) {
+// identity of their own, and nothing here needs to style a single one. The
+// marked line is the exception, and it is still one <pre> — the text around it
+// is split in two and the line laid between them, so the layout is the same
+// whether or not anything is lit.
+export function SourceView({ lines, mark }: { lines: string[]; mark?: Mark }) {
+	const at = mark && mark.line >= 1 && mark.line <= lines.length ? mark : null;
 	return (
 		<div className="flex gap-3 px-3 font-mono text-xs leading-6">
 			<pre className="shrink-0 select-none text-right text-muted-foreground/60 tabular-nums">
 				{lines.map((_, index) => index + 1).join("\n")}
 			</pre>
-			<pre className="whitespace-pre">{lines.join("\n")}</pre>
+			<pre className="whitespace-pre">
+				{at ? (
+					<>
+						{lines.slice(0, at.line - 1).map((line) => `${line}\n`)}
+						<span className="bg-amber-400/15">
+							<Lit text={lines[at.line - 1]} ranges={at.ranges} />
+						</span>
+						{lines.slice(at.line).map((line) => `\n${line}`)}
+					</>
+				) : (
+					lines.join("\n")
+				)}
+			</pre>
 		</div>
+	);
+}
+
+/** One line with the matched spans lit, the way the search panel lights them. */
+function Lit({ text, ranges }: { text: string; ranges: [number, number][] }) {
+	const parts: { text: string; lit: boolean }[] = [];
+	let at = 0;
+	for (const [start, end] of ranges) {
+		if (start > at) parts.push({ text: text.slice(at, start), lit: false });
+		parts.push({ text: text.slice(Math.max(at, start), end), lit: true });
+		at = Math.max(at, end);
+	}
+	parts.push({ text: text.slice(at), lit: false });
+
+	return (
+		<>
+			{parts.map((part, index) =>
+				part.text === "" ? null : (
+					// The parts of one line, which have no identity of their own: the
+					// line is where it is and this order changes only when it does.
+					// biome-ignore lint/suspicious/noArrayIndexKey: see above
+					<Fragment key={index}>
+						{part.lit ? (
+							<mark className="rounded-xs bg-amber-400/40 text-foreground">
+								{part.text}
+							</mark>
+						) : (
+							part.text
+						)}
+					</Fragment>
+				),
+			)}
+		</>
 	);
 }

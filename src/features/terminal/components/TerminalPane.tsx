@@ -5,15 +5,20 @@ import { useTerminalSession } from "../use-terminal-session";
 
 export function TerminalPane({
 	cwd,
+	startup,
 	onSession,
 }: {
 	cwd: string | null;
+	/** A command the shell runs as soon as it is up — the agent this session was
+	 *  started as. Typed into the shell rather than spawned in its place, so
+	 *  quitting the agent leaves a prompt in the same folder. */
+	startup?: string;
 	/** The pty id once the shell is up, null when it is not. */
 	onSession?: (id: number | null) => void;
 }) {
 	const { t } = useTranslation();
 	const host = useRef<HTMLDivElement | null>(null);
-	const { session, surface } = useTerminalSession(host, cwd);
+	const { session, surface } = useTerminalSession(host, cwd, startup);
 
 	const ptyId = session.status === "running" ? session.id : null;
 	useEffect(() => {

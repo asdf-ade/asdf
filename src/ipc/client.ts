@@ -1,4 +1,5 @@
 import type {
+	Agent,
 	AppError,
 	BrowserEndpoint,
 	BrowserInfo,
@@ -72,6 +73,8 @@ export const ipc = {
 	/** Text in the files under `cwd`, found with `git grep`. */
 	repoSearch: (cwd: string, query: string, options: SearchOptions) =>
 		call<SearchResult>("repo://search", { cwd, query, options }),
+	/** The coding agents installed on this machine, found once at startup. */
+	agents: () => call<Agent[]>("agents://list"),
 	repoIssues: (cwd: string) => call<Issue[]>("repo://issues", { cwd }),
 	repoPulls: (cwd: string) => call<PullRequest[]>("repo://pulls", { cwd }),
 
@@ -90,4 +93,11 @@ export const ipc = {
 	/** Hide every browser view while a tab is dragged, so drop zones get the
 	 *  pointer; native views sit above the DOM. */
 	browserCover: (hidden: boolean) => call<null>("browser://cover", { hidden }),
+	/** Raises an OS notification for a session that finished with nobody
+	 *  watching it. Clicking it comes back as a notification event. */
+	notify: (sessionId: string, title: string, body: string) =>
+		call<null>("notify", { sessionId, title, body }),
+	/** Whether the machine may sleep while a session is working. */
+	keepAwake: (enabled: boolean) =>
+		call<null>("power://keep-awake", { enabled }),
 };

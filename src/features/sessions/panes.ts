@@ -70,6 +70,24 @@ export function leaves(layout: Layout): string[] {
 		: layout.children.flatMap(leaves);
 }
 
+/**
+ * The group in the window's top right corner.
+ *
+ * Not the last leaf in reading order, which is the bottom right one: the
+ * window's caption buttons ride in a strip, and a window split top and bottom
+ * would put its close button in the middle of itself. Down a stack take the
+ * top; across a row take the right.
+ */
+export function topRight(layout: Layout): string {
+	if (layout.kind === "leaf") return layout.group;
+	const children = layout.children;
+	return topRight(
+		layout.direction === "row"
+			? (children[children.length - 1] ?? children[0])
+			: children[0],
+	);
+}
+
 const lastId = (panes: Pane[]) => panes[panes.length - 1]?.id ?? "";
 
 const holderOf = (window: PaneWindow, paneId: string) =>

@@ -14,9 +14,10 @@ import { BrowserPane } from "@/features/browser/components/BrowserPane";
 import { PaneArea } from "@/features/sessions/components/PaneArea";
 import { SessionSidebar } from "@/features/sessions/components/SessionSidebar";
 import { SidePanel } from "@/features/sessions/components/SidePanel";
-import type { Layout } from "@/features/sessions/panes";
-import type { Session } from "@/features/sessions/types";
+import { type Layout, topRight } from "@/features/sessions/panes";
+import type { Agent, Session, TabKind } from "@/features/sessions/types";
 import { useRepo } from "@/features/sessions/use-repo";
+import { useSessionStatus } from "@/features/sessions/use-session-status";
 import { useSessions } from "@/features/sessions/use-sessions";
 import { TerminalPane } from "@/features/terminal/components/TerminalPane";
 import { useTerminalCwd } from "@/features/terminal/use-terminal-cwd";
@@ -27,8 +28,12 @@ import { ipc } from "@/ipc/client";
 import { platform } from "@/ipc/platform";
 import { cn } from "@/lib/utils";
 import { CloneRepoDialog } from "./CloneRepoDialog";
-import { NewTabDialog, type TabKind } from "./NewTabDialog";
-import { SettingsDialog, type Theme } from "./SettingsDialog";
+import {
+	SettingsBody,
+	SettingsNav,
+	type SettingsSection,
+	type Theme,
+} from "./SettingsPage";
 import { useResizable } from "./use-resizable";
 
 /**
@@ -176,33 +181,54 @@ export function App() {
 	const { t } = useTranslation();
 	const updater = useUpdater();
 	const sessions = useSessions();
-	const [settingsOpen, setSettingsOpen] = useState(false);
+	// Which part of settings is open, and null when the panes are. Settings is
+	// a place in the window now, so it is entered at a section rather than
+	// simply switched on.
+	const [settings, setSettings] = useState<SettingsSection | null>(null);
 	const [theme, setTheme] = useState<Theme>("system");
 	// The sidebar's name field: what is in it, and null when it is closed. Held
 	// here because the empty window's buttons open it too.
 	const [naming, setNaming] = useState<string | null>(null);
 	// The workspace a clone is being set up for, and null when none is.
 	const [cloningInto, setCloningInto] = useState<string | null>(null);
+	// Whether the machine may sleep while an agent works. The block itself is
+	// the main process's, and it holds one only while something is working.
+	const [keepAwake, setKeepAwake] = useState(false);
+	useEffect(() => {
+		void ipc.keepAwake(keepAwake);
+	}, [keepAwake]);
 	const [dragging, setDragging] = useState(false);
+	// The coding agents this machine has. Asked for once — the main process
+	// looked while the window was opening — so "+" never waits on it.
+	const [agents, setAgents] = useState<Agent[]>([]);
+	useEffect(() => {
+		void ipc.agents().then((found) => found.ok && setAgents(found.value));
+	}, []);
+	// Whether the "+" menu is up. It hangs over the pane area, where a browser
+	// pane is a native view that would draw in front of it.
+	const [tabMenu, setTabMenu] = useState(false);
 	// Which pty sits behind each terminal tab, so the panel can ask the OS
 	// where that shell is. The tab on screen decides what the panel shows.
 	const [ptys, setPtys] = useState<Record<string, number>>({});
+	// The pane reports this from an effect that re-runs on every render, so an
+	// answer that has not changed must hand back the same object: a fresh one
+	// re-renders, which runs the effect, which reports again — a loop that spins
+	// a core and ends the renderer in out-of-memory.
 	const bindPty = useCallback(
 		(sessionId: string, id: number | null) =>
 			setPtys((previous) => {
 				if (id === null) {
+					if (!(sessionId in previous)) return previous;
 					const { [sessionId]: _gone, ...rest } = previous;
 					return rest;
 				}
+				if (previous[sessionId] === id) return previous;
 				return { ...previous, [sessionId]: id };
 			}),
 		[],
 	);
 	const [sidebarOpen, setSidebarOpen] = useState(true);
 	const [panelOpen, setPanelOpen] = useState(true);
-	// Which group asked "+", so the answer opens there and not wherever focus
-	// drifted while the dialog was up. Null when nothing is asking.
-	const [newTabIn, setNewTabIn] = useState<string | null>(null);
 	// What each browser tab is called, reported by the pane as its page
 	// changes; the strip has no other way to know a native view's title.
 	const [browserTitles, setBrowserTitles] = useState<Record<number, string>>(
@@ -216,12 +242,7 @@ export function App() {
 	// every dialog and takes the pointer that was meant for one. The same is
 	// true of a tab in the air, whose drop zones are DOM underneath. Both are
 	// answered by putting the views away until the thing on top is done with.
-	const overlay =
-		dragging ||
-		cloningInto !== null ||
-		settingsOpen ||
-		updater.open ||
-		newTabIn !== null;
+	const overlay = dragging || tabMenu || cloningInto !== null || updater.open;
 	useEffect(() => {
 		void ipc.browserCover(overlay);
 	}, [overlay]);
@@ -277,8 +298,15 @@ export function App() {
 	// Sessions are numbered within their workspace, the way a shell numbers its
 	// own windows, so a name is never asked for. Written here rather than kept
 	// on the session, so switching language renames them.
+	// A session started as an agent is called after it: "Claude Code 2" says
+	// what is in that window where "terminal 2" says only that it is one.
 	const sessionTitle = (session: Session) =>
-		t("session.terminalTitle", { n: session.ordinal });
+		session.agent
+			? t("session.agentTitle", {
+					name: session.agent.name,
+					n: session.ordinal,
+				})
+			: t("session.terminalTitle", { n: session.ordinal });
 
 	/**
 	 * Gives a workspace the folder the OS picker answers with.
@@ -298,13 +326,25 @@ export function App() {
 	// made, wherever the asking started.
 	const newWorkspace = () => setNaming("");
 
-	// What "+" resolves to once the dialog answers. A terminal is a session, so
-	// asking for one opens another window of the same workspace rather than a
-	// second terminal in this one.
-	const openTab = (kind: TabKind) => {
+	// What every session's shell is doing, including the ones not on screen.
+	const status = useSessionStatus({
+		ptys,
+		activeSessionId: sessions.activeSessionId,
+		titleOf: (sessionId) => {
+			const session = sessions.sessions.find((item) => item.id === sessionId);
+			return session ? sessionTitle(session) : t("app.title");
+		},
+		body: t("session.notify.finished"),
+		onOpen: sessions.openSession,
+	});
+
+	// What the "+" menu resolves to. A terminal is a session, so asking for one
+	// opens another window of the same workspace rather than a second terminal
+	// in this one.
+	const openTab = (kind: TabKind, groupId: string) => {
 		const projectId = sessions.activeProjectId;
 		if (!projectId) return;
-		if (newTabIn) sessions.focusGroup(newTabIn);
+		sessions.focusGroup(groupId);
 		if (kind === "terminal") {
 			sessions.createSession(projectId);
 			return;
@@ -323,7 +363,19 @@ export function App() {
 		<div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
 			<div className="flex min-h-0 flex-1">
 				{/* Settings sits at the foot of the sidebar, out of the way of the work. */}
-				{sidebarOpen && (
+				{/* Settings takes the window: its sections stand where the workspaces
+				    do, and the panel is gone. Each of these is its own slot rather
+				    than one branch around the lot, so the panes below keep their
+				    place in the tree — and with it their shells — across the swap. */}
+				{settings && (
+					<SettingsNav
+						section={settings}
+						onSection={setSettings}
+						onBack={() => setSettings(null)}
+						width={sidebarWidth}
+					/>
+				)}
+				{!settings && sidebarOpen && (
 					<div
 						style={{ width: sidebarWidth }}
 						className="flex min-h-0 shrink-0 flex-col bg-muted/30"
@@ -344,6 +396,7 @@ export function App() {
 							sessions={sessions.sessions}
 							browsers={sessions.browsers}
 							sessionTitle={sessionTitle}
+							status={status}
 							browserTitle={browserTitle}
 							activeProjectId={sessions.activeProjectId}
 							activeSessionId={sessions.activeSessionId}
@@ -366,7 +419,7 @@ export function App() {
 							<Button
 								variant="ghost"
 								size="sm"
-								onClick={() => setSettingsOpen(true)}
+								onClick={() => setSettings("appearance")}
 								className="h-7 w-full justify-start gap-2 px-2 text-muted-foreground text-xs"
 							>
 								<Settings className="size-3.5" />
@@ -375,12 +428,20 @@ export function App() {
 						</div>
 					</div>
 				)}
-				{sidebarOpen && <ResizeHandle onPointerDown={resizeSidebar} />}
+				{!settings && sidebarOpen && (
+					<ResizeHandle onPointerDown={resizeSidebar} />
+				)}
 
 				{/* One PaneArea per leaf of the layout tree. The panel toggles and
 				    caption buttons belong to the window, so only the first and last
-				    strips on screen carry them. */}
-				<div className="flex min-w-0 flex-1">
+				    strips on screen carry them.
+
+				    Hidden rather than unmounted while settings is open: a terminal
+				    pane closes its pty when it goes, so unmounting the panes to show
+				    a page would end every shell in the window. Hiding also takes the
+				    browser views with it, since a pane with no size asks to be put
+				    away. */}
+				<div className={cn("flex min-w-0 flex-1", settings && "hidden")}>
 					<LayoutView
 						layout={sessions.layout}
 						render={(groupId) => {
@@ -388,7 +449,10 @@ export function App() {
 							if (!group) return null;
 							const order = sessions.groupOrder;
 							const first = order[0] === group.id;
-							const last = order[order.length - 1] === group.id;
+							// The window's own buttons, which belong in its top right
+							// corner rather than at the end of the layout — after a split
+							// top and bottom those are not the same strip.
+							const last = topRight(sessions.layout) === group.id;
 							return (
 								<PaneArea
 									panes={group.panes}
@@ -404,9 +468,16 @@ export function App() {
 									onFocusGroup={() => sessions.focusGroup(group.id)}
 									onFocus={sessions.focusPane}
 									onClose={sessions.closePane}
-									onNewTab={() => {
+									agents={agents}
+									onNewTabMenu={setTabMenu}
+									onNewAgent={(agent) => {
 										if (!sessions.activeProject) return newWorkspace();
-										setNewTabIn(group.id);
+										sessions.focusGroup(group.id);
+										sessions.createSession(sessions.activeProjectId, agent);
+									}}
+									onNewTab={(kind) => {
+										if (!sessions.activeProject) return newWorkspace();
+										openTab(kind, group.id);
 									}}
 									onNewTerminal={() => {
 										if (!sessions.activeProject) return newWorkspace();
@@ -422,6 +493,7 @@ export function App() {
 									renderAgent={(session) => (
 										<TerminalPane
 											cwd={folderOf(session.projectId)}
+											startup={session.agent?.command}
 											onSession={(id) => bindPty(session.id, id)}
 										/>
 									)}
@@ -489,8 +561,21 @@ export function App() {
 					/>
 				</div>
 
-				{panelOpen && <ResizeHandle onPointerDown={resizePanel} />}
-				{panelOpen && (
+				{settings && (
+					<SettingsBody
+						section={settings}
+						theme={theme}
+						onTheme={setTheme}
+						keepAwake={keepAwake}
+						onKeepAwake={setKeepAwake}
+						// With no panel and no tab strip on screen, this row is the
+						// window's top right corner, so the caption buttons belong to it.
+						trailing={!platform.isMac && <WindowControls />}
+					/>
+				)}
+
+				{!settings && panelOpen && <ResizeHandle onPointerDown={resizePanel} />}
+				{!settings && panelOpen && (
 					// `min-h-0`, or the column takes its height from its content:
 					// a long file tree grows past the window instead of scrolling
 					// inside it, which is both why the panel had no scrollbar and
@@ -518,8 +603,8 @@ export function App() {
 							reviewOf={repo.reviewOf}
 							onRefreshGithub={() => void repo.refreshGithub()}
 							onCommit={repo.commit}
-							onOpenFile={(dir, path, line) =>
-								active && sessions.openFile(active.id, dir, path, line)
+							onOpenFile={(dir, path, line, ranges) =>
+								active && sessions.openFile(active.id, dir, path, line, ranges)
 							}
 							onOpenIssue={sessions.openIssue}
 							onOpenPull={sessions.openPull}
@@ -573,19 +658,6 @@ export function App() {
 				onCloned={(path) =>
 					cloningInto && sessions.setWorkspacePath(cloningInto, path)
 				}
-			/>
-
-			<NewTabDialog
-				open={newTabIn !== null}
-				onOpenChange={(open) => !open && setNewTabIn(null)}
-				onPick={openTab}
-			/>
-
-			<SettingsDialog
-				open={settingsOpen}
-				onOpenChange={setSettingsOpen}
-				theme={theme}
-				onTheme={setTheme}
 			/>
 
 			<UpdateDialog
