@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ipc } from "@/ipc/client";
 import { cn } from "@/lib/utils";
+import { AgentIcon } from "../agent-icon";
 import type { DropTarget, Side } from "../panes";
 import type {
 	Agent,
@@ -337,19 +338,6 @@ export function PaneArea({
 						}
 					/>
 					<DropdownMenuContent align="start">
-						{/* The agents first: running one is what the app is for, and a
-						    plain terminal is the fallback rather than the default. */}
-						{agents.map((agent) => (
-							<DropdownMenuItem
-								key={agent.id}
-								onClick={() => onNewAgent(agent)}
-								className="text-xs"
-							>
-								<Sparkles className="size-3.5" />
-								{agent.name}
-							</DropdownMenuItem>
-						))}
-						{agents.length > 0 && <DropdownMenuSeparator />}
 						{TAB_KINDS.map(({ kind, icon: Icon }) => (
 							<DropdownMenuItem
 								key={kind}
@@ -358,6 +346,24 @@ export function PaneArea({
 							>
 								<Icon className="size-3.5" />
 								{t(`session.newTab.${kind}`)}
+							</DropdownMenuItem>
+						))}
+						{/* The agents below the two kinds of tab, each under its own mark:
+						    which agents a machine has changes, and a list that grows is a
+						    list that belongs at the end. */}
+						{agents.length > 0 && <DropdownMenuSeparator />}
+						{agents.map((agent) => (
+							<DropdownMenuItem
+								key={agent.id}
+								onClick={() => onNewAgent(agent)}
+								className="text-xs"
+							>
+								<AgentIcon
+									id={agent.id}
+									className="size-3.5"
+									fallback={Sparkles}
+								/>
+								{agent.name}
 							</DropdownMenuItem>
 						))}
 					</DropdownMenuContent>
