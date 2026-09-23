@@ -25,6 +25,7 @@ import { Activity } from "./activity";
 import { detect, onPath } from "./agents";
 import { Browsers } from "./browser";
 import { clone } from "./git";
+import { commitDiff, commitFiles, history } from "./history";
 import * as repo from "./repo";
 import { ok } from "./result";
 import { search } from "./search";
@@ -303,6 +304,22 @@ ipcMain.handle("repo://issues", (_event, { cwd }: { cwd: string }) =>
 );
 ipcMain.handle("repo://pulls", (_event, { cwd }: { cwd: string }) =>
 	repo.pulls(cwd),
+);
+
+ipcMain.handle(
+	"repo://history",
+	(_event, { cwd, limit }: { cwd: string; limit: number }) =>
+		history(cwd, limit),
+);
+ipcMain.handle(
+	"repo://commit-files",
+	(_event, { cwd, hash }: { cwd: string; hash: string }) =>
+		commitFiles(cwd, hash),
+);
+ipcMain.handle(
+	"repo://commit-diff",
+	(_event, { cwd, hash, file }: { cwd: string; hash: string; file: string }) =>
+		commitDiff(cwd, hash, file),
 );
 
 ipcMain.handle(
