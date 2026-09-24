@@ -126,6 +126,19 @@
 		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "ワークスペースを削除",
 		"workspace": {
+			"title": "新しいワークスペース",
+			"name": "ワークスペース名",
+			"back": "戻る",
+			"create": "完了",
+			"folder": "フォルダ",
+			"source": {
+				"empty": "空のワークスペース",
+				"emptyHint": "フォルダなしで自由に始めます。",
+				"folder": "フォルダを開く",
+				"folderHint": "既存のフォルダを選ぶか、選択画面で新規作成します",
+				"clone": "リポジトリをクローン",
+				"cloneHint": "新しいフォルダに取得します"
+			},
 			"namePlaceholder": "web",
 			"menu": "ワークスペースの操作",
 			"chooseFolder": "フォルダを選択…",

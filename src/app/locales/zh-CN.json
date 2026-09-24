@@ -126,6 +126,19 @@
 		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "移除工作区",
 		"workspace": {
+			"title": "新建工作区",
+			"name": "工作区名称",
+			"back": "返回",
+			"create": "创建",
+			"folder": "文件夹",
+			"source": {
+				"empty": "空工作区",
+				"emptyHint": "不指定文件夹，自由开始。",
+				"folder": "打开文件夹",
+				"folderHint": "选择已有文件夹，或在选择器中新建一个",
+				"clone": "克隆仓库",
+				"cloneHint": "下载到新的文件夹"
+			},
 			"namePlaceholder": "web",
 			"menu": "工作区选项",
 			"chooseFolder": "选择文件夹…",

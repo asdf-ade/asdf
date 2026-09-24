@@ -126,6 +126,19 @@
 		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "Remover espaço de trabalho",
 		"workspace": {
+			"title": "Novo espaço de trabalho",
+			"name": "Nome do espaço de trabalho",
+			"back": "Voltar",
+			"create": "Criar",
+			"folder": "Pasta",
+			"source": {
+				"empty": "Espaço vazio",
+				"emptyHint": "Comece livre, sem pasta.",
+				"folder": "Abrir uma pasta",
+				"folderHint": "Escolha uma, ou crie uma nova no seletor",
+				"clone": "Clonar um repositório",
+				"cloneHint": "Baixe para uma pasta nova"
+			},
 			"namePlaceholder": "web",
 			"menu": "Opções do espaço de trabalho",
 			"chooseFolder": "Escolher pasta…",

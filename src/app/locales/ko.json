@@ -126,6 +126,19 @@
 		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "워크스페이스 제거",
 		"workspace": {
+			"title": "새 워크스페이스",
+			"name": "워크스페이스 이름",
+			"back": "뒤로",
+			"create": "완료",
+			"folder": "폴더",
+			"source": {
+				"empty": "빈 워크스페이스",
+				"emptyHint": "폴더 없이 자유롭게 시작합니다.",
+				"folder": "폴더 열기",
+				"folderHint": "기존 폴더를 고르거나, 선택 창에서 새로 만듭니다",
+				"clone": "저장소 복제",
+				"cloneHint": "새 폴더로 내려받습니다"
+			},
 			"namePlaceholder": "web",
 			"menu": "워크스페이스 메뉴",
 			"chooseFolder": "폴더 선택…",

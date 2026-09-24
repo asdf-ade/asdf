@@ -126,6 +126,19 @@
 		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "Remove workspace",
 		"workspace": {
+			"title": "New workspace",
+			"name": "Workspace name",
+			"back": "Back",
+			"create": "Create",
+			"folder": "Folder",
+			"source": {
+				"empty": "Empty workspace",
+				"emptyHint": "Start free, with no folder.",
+				"folder": "Open a folder",
+				"folderHint": "Pick one, or make a new one in the picker",
+				"clone": "Clone a repository",
+				"cloneHint": "Fetch it into a new folder"
+			},
 			"namePlaceholder": "web",
 			"menu": "Workspace options",
 			"chooseFolder": "Choose folder…",
