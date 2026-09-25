@@ -121,7 +121,6 @@
 		},
 		"sidePanel": "Project panel",
 		"newWorkspace": "New workspace",
-		"workspaces": "Workspaces",
 		"terminalTitle": "Terminal {{n}}",
 		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "Remove workspace",
@@ -129,7 +128,6 @@
 			"title": "New workspace",
 			"name": "Workspace name",
 			"back": "Back",
-			"create": "Create",
 			"folder": "Folder",
 			"source": {
 				"empty": "Empty workspace",

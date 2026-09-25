@@ -121,7 +121,6 @@
 		},
 		"sidePanel": "项目面板",
 		"newWorkspace": "新建工作区",
-		"workspaces": "工作区",
 		"terminalTitle": "终端 {{n}}",
 		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "移除工作区",
@@ -129,7 +128,6 @@
 			"title": "新建工作区",
 			"name": "工作区名称",
 			"back": "返回",
-			"create": "创建",
 			"folder": "文件夹",
 			"source": {
 				"empty": "空工作区",

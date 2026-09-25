@@ -1,11 +1,10 @@
-import { FolderOpen, GitBranch, Square } from "lucide-react";
+import { ChevronLeft, FolderOpen, GitBranch, Square } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
-	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
@@ -142,17 +141,29 @@ export function NewWorkspaceDialog({ open, onOpenChange, onCreate }: Props) {
 		done(cloned.value.path);
 	};
 
-	const ready =
-		!!name.trim() &&
-		!cloning &&
-		(source !== "clone" || (!!url.trim() && !!path)) &&
-		(source !== "folder" || !!path);
-
 	return (
 		<Dialog open={open} onOpenChange={(next) => !cloning && onOpenChange(next)}>
 			<DialogContent className="sm:max-w-md">
 				<DialogHeader>
-					<DialogTitle>{t("session.workspace.title")}</DialogTitle>
+					{/* Back sits beside the title rather than in a row of its own: the
+					    dialog has no footer, because the only thing one would hold is a
+					    button for what Enter and the corner X already do. */}
+					<div className="flex items-center gap-1">
+						{source !== null && (
+							<Button
+								size="icon"
+								variant="ghost"
+								disabled={cloning}
+								aria-label={t("session.workspace.back")}
+								title={t("session.workspace.back")}
+								onClick={() => setSource(null)}
+								className="-ml-1 size-6 shrink-0 text-muted-foreground"
+							>
+								<ChevronLeft className="size-4" />
+							</Button>
+						)}
+						<DialogTitle>{t("session.workspace.title")}</DialogTitle>
+					</div>
 				</DialogHeader>
 
 				{source === null ? (
@@ -190,6 +201,9 @@ export function NewWorkspaceDialog({ open, onOpenChange, onCreate }: Props) {
 										// over it, the same way the folder does.
 										const guess = repoName(event.target.value);
 										if (guess) setName(guess);
+									}}
+									onKeyDown={(event) => {
+										if (event.key === "Enter") void submit();
 									}}
 									placeholder={t("session.workspace.urlPlaceholder")}
 								/>
@@ -245,31 +259,6 @@ export function NewWorkspaceDialog({ open, onOpenChange, onCreate }: Props) {
 				    — where there is nothing else to show for a row that was pressed
 				    and did nothing. */}
 				{failure && <p className="text-destructive text-xs">{failure}</p>}
-
-				<DialogFooter>
-					<Button
-						variant="ghost"
-						disabled={cloning}
-						onClick={() =>
-							source === null ? onOpenChange(false) : setSource(null)
-						}
-					>
-						{t(
-							source === null
-								? "session.workspace.cancel"
-								: "session.workspace.back",
-						)}
-					</Button>
-					{source !== null && (
-						<Button onClick={() => void submit()} disabled={!ready}>
-							{t(
-								source === "clone"
-									? "session.workspace.clone"
-									: "session.workspace.create",
-							)}
-						</Button>
-					)}
-				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);

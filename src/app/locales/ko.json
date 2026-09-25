@@ -121,7 +121,6 @@
 		},
 		"sidePanel": "프로젝트 패널",
 		"newWorkspace": "새 워크스페이스",
-		"workspaces": "워크스페이스",
 		"terminalTitle": "터미널 {{n}}",
 		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "워크스페이스 제거",
@@ -129,7 +128,6 @@
 			"title": "새 워크스페이스",
 			"name": "워크스페이스 이름",
 			"back": "뒤로",
-			"create": "완료",
 			"folder": "폴더",
 			"source": {
 				"empty": "빈 워크스페이스",

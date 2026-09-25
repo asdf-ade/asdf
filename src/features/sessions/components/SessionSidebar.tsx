@@ -95,23 +95,18 @@ export function SessionSidebar({
 			aria-label={t("session.sidebarLabel")}
 			className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1.5 pb-2"
 		>
-			{/* What the list is, and the one thing to do to it. The "+" sits at the
-			    far end so the heading reads as a heading and not as a button. */}
-			<div className="flex items-center gap-1 pr-0.5 pl-2">
-				<span className="flex-1 truncate font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
-					{t("session.workspaces")}
-				</span>
-				<Button
-					size="icon"
-					variant="ghost"
-					aria-label={t("session.newWorkspace")}
-					title={t("session.newWorkspace")}
-					onClick={onNewWorkspace}
-					className="size-6 shrink-0 text-muted-foreground hover:text-foreground"
-				>
-					<Plus className="size-3.5" />
-				</Button>
-			</div>
+			{/* The whole row is the button, the way the one at the foot of the
+			    sidebar is: a heading with a target at its far end makes the two
+			    pixels around the "+" the only part that can be pressed. */}
+			<Button
+				variant="ghost"
+				size="sm"
+				onClick={onNewWorkspace}
+				className="h-7 w-full shrink-0 justify-start gap-2 px-2 text-muted-foreground text-xs"
+			>
+				<Plus className="size-3.5" />
+				{t("session.newWorkspace")}
+			</Button>
 
 			<ul className="mt-1 space-y-0.5">
 				{projects.map((project) => {

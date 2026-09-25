@@ -121,7 +121,6 @@
 		},
 		"sidePanel": "Painel do projeto",
 		"newWorkspace": "Novo espaço de trabalho",
-		"workspaces": "Espaços de trabalho",
 		"terminalTitle": "Terminal {{n}}",
 		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "Remover espaço de trabalho",
@@ -129,7 +128,6 @@
 			"title": "Novo espaço de trabalho",
 			"name": "Nome do espaço de trabalho",
 			"back": "Voltar",
-			"create": "Criar",
 			"folder": "Pasta",
 			"source": {
 				"empty": "Espaço vazio",

@@ -121,7 +121,6 @@
 		},
 		"sidePanel": "プロジェクトパネル",
 		"newWorkspace": "新しいワークスペース",
-		"workspaces": "ワークスペース",
 		"terminalTitle": "ターミナル {{n}}",
 		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "ワークスペースを削除",
@@ -129,7 +128,6 @@
 			"title": "新しいワークスペース",
 			"name": "ワークスペース名",
 			"back": "戻る",
-			"create": "完了",
 			"folder": "フォルダ",
 			"source": {
 				"empty": "空のワークスペース",
