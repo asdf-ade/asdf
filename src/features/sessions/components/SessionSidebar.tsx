@@ -102,10 +102,10 @@ export function SessionSidebar({
 				variant="ghost"
 				size="sm"
 				onClick={onNewWorkspace}
-				className="h-7 w-full shrink-0 justify-start gap-2 px-2 text-muted-foreground text-xs"
+				className="h-7 w-full shrink-0 justify-between gap-2 px-2 text-muted-foreground text-xs"
 			>
-				<Plus className="size-3.5" />
 				{t("session.newWorkspace")}
+				<Plus className="size-3.5" />
 			</Button>
 
 			<ul className="mt-1 space-y-0.5">
