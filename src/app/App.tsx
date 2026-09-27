@@ -606,6 +606,12 @@ export function App() {
 							onOpenFile={(dir, path, line, ranges) =>
 								active && sessions.openFile(active.id, dir, path, line, ranges)
 							}
+							activeCommit={
+								sessions.panes
+									.filter((pane) => pane.kind === "commit")
+									.find((pane) => pane.id === sessions.activeId)?.commit.hash
+							}
+							onOpenCommit={(commit) => sessions.openCommit(commit, cwd ?? "")}
 							onOpenIssue={sessions.openIssue}
 							onOpenPull={sessions.openPull}
 						/>

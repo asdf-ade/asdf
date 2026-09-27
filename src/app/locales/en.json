@@ -87,6 +87,12 @@
 			"empty": "Nothing changed yet.",
 			"title": "Changes"
 		},
+		"history": {
+			"title": "History",
+			"empty": "No commits yet.",
+			"more": "Load more",
+			"pickFile": "Pick a file to see its diff."
+		},
 		"files": {
 			"pick": "Pick a file to read it.",
 			"noPreview": "No preview for this file.",

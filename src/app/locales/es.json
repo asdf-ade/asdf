@@ -87,6 +87,12 @@
 			"empty": "Todavía no hay cambios.",
 			"title": "Cambios"
 		},
+		"history": {
+			"title": "Historial",
+			"empty": "Aún no hay commits.",
+			"more": "Cargar más",
+			"pickFile": "Elige un archivo para ver su diff."
+		},
 		"files": {
 			"pick": "Elige un archivo para leerlo.",
 			"noPreview": "Este archivo no tiene vista previa.",

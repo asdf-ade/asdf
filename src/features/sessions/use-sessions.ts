@@ -11,7 +11,7 @@ import {
 	type PaneWindow,
 } from "./panes";
 import { nextOrdinal, successorOf } from "./roster";
-import type { Agent, Pane, Project, Session } from "./types";
+import type { Agent, Commit, Pane, Project, Session } from "./types";
 
 /** Every tab of a window, across its splits. */
 const panesIn = (window: PaneWindow) =>
@@ -191,6 +191,21 @@ export function useSessions() {
 			);
 		},
 		[sessions, openIn],
+	);
+
+	/** Opens a commit as a tab of the workspace on screen. One tab per commit,
+	 *  and opening it again brings that tab forward rather than making a second. */
+	const openCommit = useCallback(
+		(commit: Commit, cwd: string) => {
+			if (!activeSession) return;
+			openIn(activeSession.projectId, {
+				kind: "commit",
+				id: `commit:${commit.hash}`,
+				cwd,
+				commit,
+			});
+		},
+		[activeSession, openIn],
 	);
 
 	const openIssue = useCallback(
@@ -450,6 +465,7 @@ export function useSessions() {
 		activeProject,
 		openSession,
 		openFile,
+		openCommit,
 		openIssue,
 		openPull,
 		closePane,
