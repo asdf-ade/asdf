@@ -21,6 +21,8 @@ import {
 	useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -905,7 +907,14 @@ function Article({
 				<div className="mt-2 flex flex-wrap items-center gap-2 text-muted-foreground text-xs">
 					{meta}
 				</div>
-				<p className="mt-4 whitespace-pre-wrap text-sm leading-6">{body}</p>
+				{/* GitHub writes these in GitHub-flavoured markdown — task lists,
+				    tables, fenced code — so that is what they are read as. The
+				    renderer builds elements rather than HTML, which is also what
+				    keeps a body nobody here wrote from carrying script into the
+				    window. The look lives in `.markdown` in index.css. */}
+				<div className="markdown mt-4 text-sm leading-6">
+					<Markdown remarkPlugins={[remarkGfm]}>{body}</Markdown>
+				</div>
 			</div>
 		</div>
 	);
