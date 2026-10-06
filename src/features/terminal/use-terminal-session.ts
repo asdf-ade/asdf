@@ -43,6 +43,8 @@ export function useTerminalSession(
 	host: React.RefObject<HTMLDivElement | null>,
 	/** Where the shell starts. Null falls back to the user's home. */
 	cwd: string | null,
+	/** What the shell runs first, when the session was started as an agent. */
+	startup?: string,
 ) {
 	const [session, setSession] = useState<SessionStatus>({ status: "starting" });
 	// What the emulator is painting its background with. The pane behind it has
@@ -120,6 +122,10 @@ export function useTerminalSession(
 			sessionId = id;
 			setSession({ status: "running", id });
 
+			// Typed in rather than run in the shell's place: quitting the agent
+			// leaves the prompt where someone who ran it by hand would expect one.
+			if (startup) void ipc.writeTerminal(id, `${startup}\r`);
+
 			const unlisten = await platform.listen<TerminalOutput>(
 				TERMINAL_OUTPUT_EVENT,
 				(event) => {
@@ -171,7 +177,7 @@ export function useTerminalSession(
 			terminal.current?.dispose();
 			terminal.current = null;
 		};
-	}, [host, cwd]);
+	}, [host, cwd, startup]);
 
 	return { session, surface };
 }

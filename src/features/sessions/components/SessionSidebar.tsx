@@ -1,9 +1,12 @@
 import {
+	Bell,
 	ChevronDown,
 	ChevronRight,
+	Circle,
 	FolderOpen,
 	GitBranch,
 	Globe,
+	LoaderCircle,
 	type LucideIcon,
 	MoreHorizontal,
 	Plus,
@@ -11,7 +14,7 @@ import {
 	Unlink,
 	X,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { Project, Session } from "../types";
+import type { SessionStatus } from "../use-session-status";
 
 type Props = {
 	projects: Project[];
@@ -32,6 +36,8 @@ type Props = {
 	browsers: Record<string, { id: string; browserId: number }[]>;
 	/** What a session is called, numbered within its workspace. */
 	sessionTitle: (session: Session) => string;
+	/** What each session's shell is doing, drawn in place of its icon. */
+	status: Record<string, SessionStatus>;
 	/** What a browser is called: its page title, once it has one. */
 	browserTitle: (browserId: number) => string;
 	/** The workspace whose window is on screen. Switching swaps the tab set. */
@@ -66,6 +72,7 @@ export function SessionSidebar({
 	sessions,
 	browsers,
 	sessionTitle,
+	status,
 	browserTitle,
 	activeProjectId,
 	activeSessionId,
@@ -223,20 +230,25 @@ export function SessionSidebar({
 											</Button>
 										}
 									/>
-									<DropdownMenuContent align="end" className="w-52">
+									<DropdownMenuContent align="end" className="w-48">
 										<DropdownMenuItem
 											onClick={() => onChooseFolder(project.id)}
+											className="text-xs"
 										>
 											<FolderOpen className="size-3.5" />
 											{t("session.workspace.chooseFolder")}
 										</DropdownMenuItem>
-										<DropdownMenuItem onClick={() => onCloneInto(project.id)}>
+										<DropdownMenuItem
+											onClick={() => onCloneInto(project.id)}
+											className="text-xs"
+										>
 											<GitBranch className="size-3.5" />
 											{t("session.workspace.cloneRepo")}
 										</DropdownMenuItem>
 										{project.path && (
 											<DropdownMenuItem
 												onClick={() => onClearFolder(project.id)}
+												className="text-xs"
 											>
 												<Unlink className="size-3.5" />
 												{t("session.workspace.clearFolder")}
@@ -246,6 +258,7 @@ export function SessionSidebar({
 										<DropdownMenuItem
 											variant="destructive"
 											onClick={() => onRemoveWorkspace(project.id)}
+											className="text-xs"
 										>
 											<X className="size-3.5" />
 											{t("session.removeWorkspace")}
@@ -260,6 +273,7 @@ export function SessionSidebar({
 										<li key={session.id}>
 											<Row
 												icon={TerminalSquare}
+												mark={<StatusMark status={status[session.id]} />}
 												label={sessionTitle(session)}
 												current={active && session.id === activeSessionId}
 												onOpen={() => onOpenSession(session.id)}
@@ -286,14 +300,48 @@ export function SessionSidebar({
 	);
 }
 
+/**
+ * What a session's shell is doing, in the place its icon would be: a spinner
+ * while it works, an alert once it has finished with nobody watching, and a
+ * quiet green dot when there is nothing waiting for you.
+ */
+function StatusMark({ status }: { status: SessionStatus | undefined }) {
+	const { t } = useTranslation();
+	const state = status ?? "idle";
+	const label = t(`session.status.${state}`);
+	// One slot the width of the icon a browser row shows, so the names line up
+	// whatever is in it. The quiet state is a dot rather than a ring: it is the
+	// one every row wears most of the time, and it should sit under the name
+	// rather than compete with it.
+	return (
+		<span
+			role="img"
+			aria-label={label}
+			title={label}
+			className="flex size-3.5 shrink-0 items-center justify-center"
+		>
+			{state === "busy" ? (
+				<LoaderCircle className="size-3.5 animate-spin" />
+			) : state === "done" ? (
+				<Bell className="size-3.5 text-amber-500" />
+			) : (
+				<Circle className="size-2 fill-emerald-500 text-emerald-500" />
+			)}
+		</span>
+	);
+}
+
 /** One thing open in a workspace, indented under it. */
 function Row({
 	icon: Icon,
+	mark,
 	label,
 	current,
 	onOpen,
 }: {
 	icon: LucideIcon;
+	/** Drawn instead of the icon, for a row that has something to say. */
+	mark?: ReactNode;
 	label: string;
 	current: boolean;
 	onOpen: () => void;
@@ -310,7 +358,7 @@ function Row({
 					: "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
 			)}
 		>
-			<Icon className="size-3.5 shrink-0" />
+			{mark ?? <Icon className="size-3.5 shrink-0" />}
 			<span className="truncate">{label}</span>
 		</button>
 	);

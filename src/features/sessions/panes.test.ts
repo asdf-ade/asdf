@@ -5,6 +5,7 @@ import {
 	leaves,
 	movePane,
 	openPane,
+	topRight,
 	windowOf,
 } from "./panes";
 import type { Pane } from "./types";
@@ -224,5 +225,63 @@ describe("movePane within a strip", () => {
 		expect(
 			after.groups.find((g) => g.id === left.id)?.panes.map((p) => p.id),
 		).toEqual(["session:s2"]);
+	});
+});
+
+describe("topRight", () => {
+	const leaf = (group: string): Layout => ({ kind: "leaf", group });
+
+	it("is the only group when the window has not been split", () => {
+		expect(topRight(leaf("a"))).toBe("a");
+	});
+
+	it("takes the right of a row", () => {
+		expect(
+			topRight({
+				kind: "split",
+				direction: "row",
+				children: [leaf("a"), leaf("b")],
+			}),
+		).toBe("b");
+	});
+
+	// The bug this exists for: reading order ends at the bottom, and a window
+	// split top and bottom would put its close button in the middle of itself.
+	it("takes the top of a column, not the end of it", () => {
+		expect(
+			topRight({
+				kind: "split",
+				direction: "column",
+				children: [leaf("a"), leaf("b")],
+			}),
+		).toBe("a");
+	});
+
+	it("follows both down a nested split", () => {
+		const layout: Layout = {
+			kind: "split",
+			direction: "column",
+			children: [
+				{ kind: "split", direction: "row", children: [leaf("a"), leaf("b")] },
+				leaf("c"),
+			],
+		};
+		expect(topRight(layout)).toBe("b");
+	});
+
+	it("is the top right of a row of columns", () => {
+		const layout: Layout = {
+			kind: "split",
+			direction: "row",
+			children: [
+				leaf("a"),
+				{
+					kind: "split",
+					direction: "column",
+					children: [leaf("b"), leaf("c")],
+				},
+			],
+		};
+		expect(topRight(layout)).toBe("b");
 	});
 });

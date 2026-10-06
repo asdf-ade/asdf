@@ -83,13 +83,35 @@ export type SearchResult = {
 	/** True when the search stopped counting; the panel says so rather than
 	 *  reporting a total it does not have. */
 	capped: boolean;
+	/** The files the query names rather than the ones it is written in, listed
+	 *  above them: knowing the file you want by name is the ordinary case. The
+	 *  ranges are into the path, and are lit the way a line's are. */
+	names: { path: string; ranges: [number, number][] }[];
+	/** True when the name list was cut short, as `capped` is for the matches. */
+	namesCapped: boolean;
 };
+
+/** A coding agent the machine has: what to call it, and what starts it. The
+ *  name is the product's own, so it reads the same in every locale. */
+export type Agent = { id: string; name: string; command: string };
 
 /** Emitted for every chunk a session prints. */
 export const TERMINAL_OUTPUT_EVENT = "terminal://output";
 
 /** Emitted once with the session id when its shell has ended. */
 export const TERMINAL_EXIT_EVENT = "terminal://exit";
+
+/**
+ * Emitted when a session starts or stops writing, which is how a shell that is
+ * working is told from one that has finished. Worked out in the main process
+ * because a session that is not on screen has nothing mounted in the renderer.
+ */
+export const TERMINAL_ACTIVITY_EVENT = "terminal://activity";
+
+export type TerminalActivity = { id: number; busy: boolean };
+
+/** Emitted with the session id when a finished-work notification is clicked. */
+export const NOTIFICATION_ACTIVATE_EVENT = "notification://activate";
 
 /** Emitted while an update downloads. */
 export const UPDATER_PROGRESS_EVENT = "updater://progress";

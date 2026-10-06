@@ -11,7 +11,7 @@ import {
 	type PaneWindow,
 } from "./panes";
 import { nextOrdinal, successorOf } from "./roster";
-import type { Pane, Project, Session } from "./types";
+import type { Agent, Pane, Project, Session } from "./types";
 
 /** Every tab of a window, across its splits. */
 const panesIn = (window: PaneWindow) =>
@@ -165,14 +165,28 @@ export function useSessions() {
 	);
 
 	const openFile = useCallback(
-		(sessionId: string, dir: string, path: string, line?: number) => {
+		(
+			sessionId: string,
+			dir: string,
+			path: string,
+			line?: number,
+			ranges?: [number, number][],
+		) => {
 			const session = sessions.find((item) => item.id === sessionId);
 			if (!session) return;
 			// The line is not part of the id: one file is one tab, and opening it
 			// again at another line moves that tab rather than making a second.
 			openIn(
 				session.projectId,
-				{ kind: "file", id: `file:${dir}/${path}`, sessionId, dir, path, line },
+				{
+					kind: "file",
+					id: `file:${dir}/${path}`,
+					sessionId,
+					dir,
+					path,
+					line,
+					ranges,
+				},
 				sessionId,
 			);
 		},
@@ -326,9 +340,12 @@ export function useSessions() {
 	 * the state this same render is about to replace.
 	 */
 	const startSession = useCallback(
-		(projectId: string, ordinal: number) => {
+		(projectId: string, ordinal: number, agent?: Agent) => {
 			const id = `s${Date.now()}`;
-			setSessions((previous) => [{ id, ordinal, projectId }, ...previous]);
+			setSessions((previous) => [
+				{ id, ordinal, projectId, agent },
+				...previous,
+			]);
 			openIn(
 				projectId,
 				{ kind: "session", id: `session:${id}`, sessionId: id },
@@ -346,8 +363,8 @@ export function useSessions() {
 	 * next one and put two of the same name in the sidebar.
 	 */
 	const createSession = useCallback(
-		(projectId: string) =>
-			startSession(projectId, nextOrdinal(sessions, projectId)),
+		(projectId: string, agent?: Agent) =>
+			startSession(projectId, nextOrdinal(sessions, projectId), agent),
 		[sessions, startSession],
 	);
 

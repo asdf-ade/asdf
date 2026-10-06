@@ -6,17 +6,23 @@ import {
 	dialog,
 	ipcMain,
 	Menu,
+	Notification,
 	nativeTheme,
+	powerSaveBlocker,
 	shell,
 } from "electron";
 import {
 	BROWSER_STATE_EVENT,
 	CLONE_PROGRESS_EVENT,
+	NOTIFICATION_ACTIVATE_EVENT,
 	type SearchOptions,
+	TERMINAL_ACTIVITY_EVENT,
 	TERMINAL_EXIT_EVENT,
 	TERMINAL_OUTPUT_EVENT,
 	WINDOW_CLOSE_REQUESTED_EVENT,
 } from "@/ipc/bindings";
+import { Activity } from "./activity";
+import { detect, onPath } from "./agents";
 import { Browsers } from "./browser";
 import { clone } from "./git";
 import * as repo from "./repo";
@@ -31,6 +37,39 @@ const directory = path.dirname(fileURLToPath(import.meta.url));
 
 const terminals = new Registry();
 
+/** How long a shell must be quiet before its work counts as finished. */
+const QUIET_MS = 1000;
+
+/** How long after a start or a resize a shell's output is not counted as work:
+ *  long enough for the prompt or the repaint, short enough that a command typed
+ *  straight away still shows. */
+const SETTLE_MS = 500;
+
+/** Whether the person asked the machine to stay awake while agents work. */
+let keepAwake = false;
+/** The id of the block being held, or null while the machine may sleep. */
+let sleepBlock: number | null = null;
+
+const activity = new Activity(QUIET_MS, (id, busy) => {
+	main?.webContents.send(TERMINAL_ACTIVITY_EVENT, { id, busy });
+	holdSleep();
+});
+
+/**
+ * Starts or stops the sleep block. Held only while both are true — the setting
+ * is on and something is working — so the machine sleeps as it normally would
+ * the moment the last agent stops.
+ */
+function holdSleep(): void {
+	const wanted = keepAwake && activity.working > 0;
+	if (wanted && sleepBlock === null) {
+		sleepBlock = powerSaveBlocker.start("prevent-app-suspension");
+	} else if (!wanted && sleepBlock !== null) {
+		powerSaveBlocker.stop(sleepBlock);
+		sleepBlock = null;
+	}
+}
+
 // Every WebContents becomes a CDP target on this port, including the browser
 // panes — that is how agent-browser drives what the person sees. Port 0 lets
 // Chromium pick a free one and write it to DevToolsActivePort; `Browsers` reads
@@ -42,6 +81,16 @@ app.commandLine.appendSwitch("remote-debugging-port", "0");
 // default one, where the application menu is also what binds copy, paste and
 // quit to their shortcuts.
 if (process.platform !== "darwin") Menu.setApplicationMenu(null);
+
+// Windows shows a notification only for an app it can name, and it takes that
+// name from the Start Menu shortcut electron-builder writes with this id.
+// Development has no shortcut, so the executable stands in: without either,
+// every toast is dropped in silence and the feature looks broken rather than
+// blocked. Must be set before the first notification.
+if (process.platform === "win32")
+	app.setAppUserModelId(
+		app.isPackaged ? "io.github.asdf-ade.asdf" : process.execPath,
+	);
 
 let main: BrowserWindow | null = null;
 /** Set once the renderer has agreed the window may go. */
@@ -91,6 +140,39 @@ function createWindow(): BrowserWindow {
 	// left to place it, hide it or close it, and it stays over the window at
 	// whatever bounds it last had. The reload is the end of those panes.
 	window.webContents.on("did-start-loading", () => browsers.closeAll());
+
+	// A window that has gone blank looks the same from outside whatever caused
+	// it: a renderer that died, one that hung, or a page that tried to load and
+	// could not — which in development is the dev server having gone away. Each
+	// says so here, because none of them says anything on its own.
+	//
+	// A dead renderer also leaves the window behind it: a white rectangle with
+	// no way back but quitting. That one is recoverable, so it is recovered.
+	//
+	// Once, though: a renderer that dies as soon as it loads would spin here
+	// forever, and a window that keeps blinking is worse than one that is
+	// plainly broken. A second death inside ten seconds is left alone.
+	let recovered = 0;
+	window.webContents.on("render-process-gone", (_event, details) => {
+		console.error(
+			`renderer gone: ${details.reason} (exit code ${details.exitCode})`,
+		);
+		if (Date.now() - recovered < 10_000) return;
+		recovered = Date.now();
+		// Whatever it opened is unreachable now: the ids were in its memory, so
+		// nothing can place a view or write to a shell again. They go with it.
+		terminals.closeAll();
+		browsers.closeAll();
+		window.webContents.reload();
+	});
+	window.on("unresponsive", () => console.error("renderer is not responding"));
+	window.webContents.on(
+		"did-fail-load",
+		(_event, code, description, url, isMainFrame) => {
+			if (isMainFrame)
+				console.error(`load failed: ${description} (${code}) ${url}`);
+		},
+	);
 
 	window.on("close", (event) => {
 		if (closing) return;
@@ -211,6 +293,11 @@ ipcMain.handle(
 		}: { cwd: string; query: string; options: SearchOptions },
 	) => search(cwd, query, options),
 );
+// Looked up once, while the window is still opening, so the "+" menu never
+// waits on five processes to say what it can start.
+const agents = detect(onPath);
+ipcMain.handle("agents://list", () => agents.then(ok));
+
 ipcMain.handle("repo://issues", (_event, { cwd }: { cwd: string }) =>
 	repo.issues(cwd),
 );
@@ -223,12 +310,22 @@ ipcMain.handle(
 	(
 		_event,
 		{ cwd, cols, rows }: { cwd: string | null; cols: number; rows: number },
-	) =>
-		terminals.open(cwd, cols, rows, {
-			onOutput: (id, chunk) =>
-				main?.webContents.send(TERMINAL_OUTPUT_EVENT, { id, chunk }),
-			onExit: (id) => main?.webContents.send(TERMINAL_EXIT_EVENT, id),
-		}),
+	) => {
+		const opened = terminals.open(cwd, cols, rows, {
+			onOutput: (id, chunk) => {
+				activity.saw(id);
+				main?.webContents.send(TERMINAL_OUTPUT_EVENT, { id, chunk });
+			},
+			onExit: (id) => {
+				activity.forget(id);
+				holdSleep();
+				main?.webContents.send(TERMINAL_EXIT_EVENT, id);
+			},
+		});
+		// A shell greets you as it starts. That is not work.
+		if (opened.ok) activity.mute(opened.value, SETTLE_MS);
+		return opened;
+	},
 );
 
 ipcMain.handle(
@@ -239,12 +336,61 @@ ipcMain.handle(
 
 ipcMain.handle(
 	"resize_terminal",
-	(_event, { id, cols, rows }: { id: number; cols: number; rows: number }) =>
-		terminals.resize(id, cols, rows),
+	(_event, { id, cols, rows }: { id: number; cols: number; rows: number }) => {
+		// A resize makes the shell repaint, and a session coming on screen is
+		// sized exactly then — so switching sessions would spin the sidebar for
+		// the session you just left behind and the one you just arrived at.
+		activity.mute(id, SETTLE_MS);
+		return terminals.resize(id, cols, rows);
+	},
 );
 
-ipcMain.handle("close_terminal", (_event, { id }: { id: number }) =>
-	terminals.close(id),
+ipcMain.handle("close_terminal", (_event, { id }: { id: number }) => {
+	activity.forget(id);
+	holdSleep();
+	return terminals.close(id);
+});
+
+/**
+ * The notification a finished session raises when nobody was watching it. The
+ * renderer decides when that is — it is the side that knows which session is on
+ * screen — and writes the words, since the strings are its to translate.
+ */
+ipcMain.handle(
+	"notify",
+	(
+		_event,
+		{
+			title,
+			body,
+			sessionId,
+		}: { title: string; body: string; sessionId: string },
+	) => {
+		if (!Notification.isSupported()) return ok(null);
+		// Not silent: the sound is the half of a notification that reaches
+		// someone who is looking at something else, which is who this is for.
+		// The OS chooses which sound, the same one its own notifications use.
+		const note = new Notification({ title, body, silent: false });
+		note.on("click", () => {
+			const window = main;
+			if (!window) return;
+			if (window.isMinimized()) window.restore();
+			window.show();
+			window.focus();
+			window.webContents.send(NOTIFICATION_ACTIVATE_EVENT, sessionId);
+		});
+		note.show();
+		return ok(null);
+	},
+);
+
+ipcMain.handle(
+	"power://keep-awake",
+	(_event, { enabled }: { enabled: boolean }) => {
+		keepAwake = enabled;
+		holdSleep();
+		return ok(null);
+	},
 );
 
 // The folder a workspace opens in. The OS dialog is the whole picker: it
@@ -338,6 +484,8 @@ if (!app.requestSingleInstanceLock()) {
 	// browser views go with them.
 	app.on("before-quit", () => {
 		closing = true;
+		keepAwake = false;
+		holdSleep();
 		terminals.closeAll();
 		browsers.closeAll();
 	});

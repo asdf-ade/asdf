@@ -105,9 +105,9 @@
 			"regex": "Usar expressão regular",
 			"searching": "Pesquisando…",
 			"none": "Nenhum resultado.",
-			"count": "{{matches}} resultados em {{files}} arquivos",
-			"cappedCount": "Primeiros {{matches}} resultados em {{files}} arquivos",
-			"toggleGlobs": "Mostrar detalhes da busca"
+			"toggleGlobs": "Mostrar detalhes da busca",
+			"names": "Nomes de arquivo",
+			"contents": "Conteúdo dos arquivos"
 		},
 		"pane": {
 			"close": "Fechar janela",
@@ -117,14 +117,13 @@
 		"newTab": {
 			"title": "Nova aba",
 			"terminal": "Terminal",
-			"terminalHint": "Outra sessão neste espaço de trabalho, com o seu próprio shell",
-			"browser": "Navegador",
-			"browserHint": "Uma página que seu agente pode conduzir"
+			"browser": "Navegador"
 		},
 		"sidePanel": "Painel do projeto",
 		"newWorkspace": "Novo espaço de trabalho",
 		"workspaces": "Espaços de trabalho",
 		"terminalTitle": "Terminal {{n}}",
+		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "Remover espaço de trabalho",
 		"workspace": {
 			"namePlaceholder": "web",
@@ -141,6 +140,14 @@
 			"cancel": "Cancelar",
 			"clone": "Clonar",
 			"cloning": "Clonando…"
+		},
+		"status": {
+			"idle": "Concluído",
+			"busy": "Trabalhando",
+			"done": "Concluído, ainda não aberto"
+		},
+		"notify": {
+			"finished": "O trabalho terminou."
 		}
 	},
 	"settings": {
@@ -153,7 +160,14 @@
 			"dark": "Escuro"
 		},
 		"language": "Idioma",
-		"close": "Fechar"
+		"sections": {
+			"appearance": "Tema",
+			"language": "Idioma",
+			"power": "Manter ativo"
+		},
+		"back": "Voltar",
+		"keepAwake": "Manter a máquina acordada enquanto um agente trabalha",
+		"keepAwakeHint": "A máquina não dormirá enquanto alguma sessão estiver trabalhando."
 	},
 	"github": {
 		"issues": "Issues",

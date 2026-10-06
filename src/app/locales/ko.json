@@ -105,9 +105,9 @@
 			"regex": "정규식 사용",
 			"searching": "검색 중…",
 			"none": "결과가 없습니다.",
-			"count": "{{files}}개 파일에서 {{matches}}건",
-			"cappedCount": "{{files}}개 파일에서 처음 {{matches}}건",
-			"toggleGlobs": "검색 옵션 펼치기"
+			"toggleGlobs": "검색 옵션 펼치기",
+			"names": "파일 이름",
+			"contents": "파일 내용"
 		},
 		"pane": {
 			"close": "창 닫기",
@@ -117,14 +117,13 @@
 		"newTab": {
 			"title": "새 탭",
 			"terminal": "터미널",
-			"terminalHint": "이 워크스페이스에 세션을 하나 더. 자기 셸을 가진다",
-			"browser": "브라우저",
-			"browserHint": "에이전트가 조작할 수 있는 페이지"
+			"browser": "브라우저"
 		},
 		"sidePanel": "프로젝트 패널",
 		"newWorkspace": "새 워크스페이스",
 		"workspaces": "워크스페이스",
 		"terminalTitle": "터미널 {{n}}",
+		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "워크스페이스 제거",
 		"workspace": {
 			"namePlaceholder": "web",
@@ -141,6 +140,14 @@
 			"cancel": "취소",
 			"clone": "복제",
 			"cloning": "복제 중…"
+		},
+		"status": {
+			"idle": "끝남",
+			"busy": "작업 중",
+			"done": "끝남 · 아직 열지 않음"
+		},
+		"notify": {
+			"finished": "작업이 끝났습니다."
 		}
 	},
 	"settings": {
@@ -153,7 +160,14 @@
 			"dark": "어둡게"
 		},
 		"language": "언어",
-		"close": "닫기"
+		"sections": {
+			"appearance": "테마",
+			"language": "언어",
+			"power": "절전 방지"
+		},
+		"back": "뒤로",
+		"keepAwake": "에이전트가 작업하는 동안 절전 막기",
+		"keepAwakeHint": "작업 중인 세션이 있으면 컴퓨터가 잠자기로 들어가지 않습니다."
 	},
 	"github": {
 		"issues": "이슈",
