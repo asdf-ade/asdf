@@ -151,3 +151,44 @@
 .xterm-viewport::-webkit-scrollbar {
   display: none;
 }
+
+/* One scrollbar for the whole app, drawn rather than left to the platform.
+   macOS hides its overlay bar until the wheel moves and Windows draws a wide
+   grey trough; between them a panel either gives no sign it scrolls or loses a
+   sixth of its width to saying so. This is narrow, has no trough, and is the
+   foreground at low opacity, so it reads on both themes without a colour of
+   its own.
+
+   `scrollbar-width` and `scrollbar-color` are what Chromium 121 and later
+   actually use, and setting them turns the `::-webkit-` rules off; those are
+   kept for anything older, where they say the same thing. The terminal opts
+   out above: the emulator draws its own surface and should not sit beside a
+   strip of chrome it did not draw. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--color-foreground) 22%, transparent)
+    transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  /* Padding plus a background clipped to it is how a thumb gets an inset
+     without a wrapper: the border is transparent and the paint stops short. */
+  background-color: color-mix(in oklab, var(--color-foreground) 22%, transparent);
+  background-clip: padding-box;
+  border: 3px solid transparent;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in oklab, var(--color-foreground) 38%, transparent);
+}

@@ -88,8 +88,6 @@
 			"title": "Alterações"
 		},
 		"files": {
-			"search": "Buscar arquivos",
-			"noMatch": "Nada corresponde.",
 			"pick": "Escolha um arquivo para ler.",
 			"noPreview": "Este arquivo não tem pré-visualização.",
 			"title": "Arquivos",
@@ -98,6 +96,18 @@
 			"byName": "Nome · {{n}}",
 			"byContent": "Conteúdo · {{n}}",
 			"loading": "Carregando…"
+		},
+		"search": {
+			"query": "Pesquisar",
+			"include": "Arquivos a incluir",
+			"matchCase": "Diferenciar maiúsculas",
+			"wholeWord": "Palavra inteira",
+			"regex": "Usar expressão regular",
+			"searching": "Pesquisando…",
+			"none": "Nenhum resultado.",
+			"count": "{{matches}} resultados em {{files}} arquivos",
+			"cappedCount": "Primeiros {{matches}} resultados em {{files}} arquivos",
+			"toggleGlobs": "Mostrar detalhes da busca"
 		},
 		"pane": {
 			"close": "Fechar janela",
@@ -113,31 +123,24 @@
 		},
 		"sidePanel": "Painel do projeto",
 		"newWorkspace": "Novo espaço de trabalho",
+		"workspaces": "Espaços de trabalho",
 		"terminalTitle": "Terminal {{n}}",
 		"removeWorkspace": "Remover espaço de trabalho",
 		"workspace": {
-			"title": "Novo espaço de trabalho",
-			"name": "Nome do espaço de trabalho",
 			"namePlaceholder": "web",
-			"cancel": "Cancelar",
-			"back": "Voltar",
-			"create": "Criar",
-			"clone": "Clonar",
-			"folder": "Pasta",
+			"menu": "Opções do espaço de trabalho",
+			"chooseFolder": "Escolher pasta…",
+			"clearFolder": "Desvincular pasta",
+			"cloneRepo": "Clonar repositório…",
+			"cloneTitle": "Clonar repositório",
+			"url": "URL do repositório",
+			"urlPlaceholder": "https://github.com/owner/repo.git",
 			"parent": "Clonar em",
 			"noFolder": "Nenhuma pasta escolhida",
 			"choose": "Escolher…",
-			"url": "URL do repositório",
-			"urlPlaceholder": "https://github.com/owner/repo.git",
-			"cloning": "Clonando…",
-			"source": {
-				"empty": "Espaço vazio",
-				"emptyHint": "Comece livre, sem pasta.",
-				"folder": "Abrir uma pasta",
-				"folderHint": "Escolha uma, ou crie uma nova no seletor",
-				"clone": "Clonar um repositório",
-				"cloneHint": "Baixe para uma pasta nova"
-			}
+			"cancel": "Cancelar",
+			"clone": "Clonar",
+			"cloning": "Clonando…"
 		}
 	},
 	"settings": {

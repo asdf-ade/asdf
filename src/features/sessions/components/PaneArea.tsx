@@ -14,6 +14,7 @@ import {
 	Fragment,
 	type ReactNode,
 	useEffect,
+	useRef,
 	useState,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -30,7 +31,7 @@ import type {
 	ReviewState,
 	Session,
 } from "../types";
-import { DiffView, SourceView } from "./CodeView";
+import { DiffView, LINE_HEIGHT, SourceView } from "./CodeView";
 
 /** The dataTransfer type a dragged tab travels as. */
 const PANE_MIME = "application/x-asdf-pane";
@@ -210,6 +211,17 @@ export function PaneArea({
 			pane.kind === "browser",
 	);
 
+	// Terminal tabs, for the same reason and then one more. A shell is a live
+	// thing like a browser's page, so unmounting the tab you left would end it.
+	// And rendering only the showing one is not enough even when the rest are
+	// not wanted on screen: they occupy the same slot in the tree, so React
+	// keeps the one emulator and hands it to whichever tab is in front —
+	// every terminal tab showed the first terminal's shell.
+	const terminals = panes.filter(
+		(pane): pane is Extract<Pane, { kind: "session" }> =>
+			pane.kind === "session",
+	);
+
 	// Nothing open: the one thing to do is start a terminal.
 	const empty = (
 		<div className="flex flex-1 items-center justify-center">
@@ -301,20 +313,33 @@ export function PaneArea({
 					<PullBody
 						pull={pulls.find((item) => item.number === active.number)}
 					/>
-				) : active.kind === "browser" ? null : !session ? (
+				) : active.kind === "browser" ||
+					active.kind === "session" ? null : !session ? (
 					empty
-				) : active.kind === "session" ? (
-					<SessionBody>{renderAgent(session)}</SessionBody>
 				) : (
 					<FileBody
 						key={active.id}
 						dir={active.dir}
 						path={active.path}
+						line={active.line}
 						repo={repo}
 						reviewOf={reviewOf}
 						onReview={onReview}
 					/>
 				)}
+
+				{/* Every terminal tab stays mounted, keyed by its session, so its
+				    shell and scrollback survive a visit to another tab and no two
+				    tabs can end up sharing one emulator. */}
+				{terminals.map((pane) => {
+					const own = sessions.find((item) => item.id === pane.sessionId);
+					if (!own) return null;
+					return (
+						<SessionBody key={pane.id} showing={pane.id === active?.id}>
+							{renderAgent(own)}
+						</SessionBody>
+					);
+				})}
 
 				{/* Every browser tab stays mounted so its view keeps its page; only
 				    the showing one is placed, the rest are parked off screen. */}
@@ -428,7 +453,10 @@ function Tab({
 				onDropAt(event, nearHalf(event));
 			}}
 			className={cn(
-				"@container relative flex min-w-8 max-w-52 flex-1 basis-0 items-center gap-1 border-r pr-2 pl-2.5",
+				// No padding of its own: every pixel of a tab that is not its close
+				// button belongs to the button that selects it. Padding on the strip
+				// looked like part of the tab and did nothing when pressed.
+				"@container relative flex min-w-8 max-w-52 flex-1 basis-0 items-stretch border-r",
 				active
 					? "bg-background after:absolute after:inset-x-0 after:-bottom-px after:h-px after:bg-background"
 					: "text-muted-foreground hover:bg-background/50 hover:text-foreground",
@@ -437,23 +465,29 @@ function Tab({
 				active && !focused && "text-muted-foreground",
 			)}
 		>
+			{/* Full bleed: the whole height, and every pixel out to the close
+			    button. `items-stretch` on the strip is what gives it the height. */}
 			<button
 				type="button"
 				onClick={onFocus}
-				className="flex min-w-0 flex-1 items-center gap-1.5 text-[11px]"
+				className="flex min-w-0 flex-1 items-center gap-1.5 pr-1 pl-2.5 text-[11px]"
 			>
 				{Icon && <Icon className="size-3.5 shrink-0" />}
 				<span className="truncate">{label}</span>
 			</button>
 			{/* Squeezed inactive tabs give the space to their name; the active
 			    tab keeps its close button, as the one you are most likely to
-			    close. */}
+			    close. Its own right padding rather than the tab's, so the strip
+			    past it is not a dead corner of the tab. */}
 			<Button
 				size="icon"
 				variant="ghost"
 				aria-label={t("session.pane.close")}
 				onClick={onClose}
-				className={cn("size-5 shrink-0", !active && "hidden @[5rem]:flex")}
+				className={cn(
+					"my-auto mr-2 size-5 shrink-0",
+					!active && "hidden @[5rem]:flex",
+				)}
 			>
 				<X className="size-3" />
 			</Button>
@@ -461,12 +495,29 @@ function Tab({
 	);
 }
 
-function SessionBody({ children }: { children: ReactNode }) {
+function SessionBody({
+	showing,
+	children,
+}: {
+	/** The one on screen. The rest keep their shell and are hidden, not
+	 *  unmounted — see `terminals` in PaneArea. */
+	showing: boolean;
+	children: ReactNode;
+}) {
 	// No toolbar: the tab names the session and the status bar carries the
 	// branch, so a third row would only repeat them. A one-cell grid, not a
 	// block: the terminal positions its children absolutely and needs the
 	// slot to give it a height.
-	return <div className="grid min-h-0 flex-1 overflow-hidden">{children}</div>;
+	return (
+		<div
+			className={cn(
+				"absolute inset-0 grid overflow-hidden",
+				!showing && "hidden",
+			)}
+		>
+			{children}
+		</div>
+	);
 }
 
 /** Repository-relative name of a file opened from `dir`, or null when the
@@ -480,12 +531,15 @@ function inRepo(root: string | null, dir: string, path: string): string | null {
 function FileBody({
 	dir,
 	path,
+	line,
 	repo,
 	reviewOf,
 	onReview,
 }: {
 	dir: string;
 	path: string;
+	/** Where to land, when whoever opened it knew — a search result does. */
+	line?: number;
 	repo: RepoSnapshot | null;
 	reviewOf: (file: string) => ReviewState;
 	onReview: (file: string, state: ReviewState) => void;
@@ -494,6 +548,7 @@ function FileBody({
 	const [rows, setRows] = useState<DiffRow[] | null>(null);
 	const [source, setSource] = useState<string[] | null>(null);
 	const [failure, setFailure] = useState<string | null>(null);
+	const body = useRef<HTMLDivElement | null>(null);
 
 	const root = repo?.root ?? null;
 	const file = inRepo(root, dir, path);
@@ -534,6 +589,18 @@ function FileBody({
 		};
 	}, [request]);
 
+	// A third of the way down rather than at the top: a line with nothing above
+	// it is a line with no context, and the question being answered is almost
+	// always about what surrounds it.
+	useEffect(() => {
+		const element = body.current;
+		if (!line || !element || !source) return;
+		element.scrollTop = Math.max(
+			0,
+			(line - 1) * LINE_HEIGHT - element.clientHeight / 3,
+		);
+	}, [line, source]);
+
 	return (
 		<>
 			{changed && file && (
@@ -568,7 +635,7 @@ function FileBody({
 				</div>
 			)}
 
-			<div className="min-h-0 flex-1 overflow-auto">
+			<div ref={body} className="min-h-0 flex-1 overflow-auto">
 				{failure ? (
 					<p className="p-6 text-muted-foreground text-sm">{failure}</p>
 				) : asDiff ? (

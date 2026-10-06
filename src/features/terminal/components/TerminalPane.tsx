@@ -13,7 +13,7 @@ export function TerminalPane({
 }) {
 	const { t } = useTranslation();
 	const host = useRef<HTMLDivElement | null>(null);
-	const { session } = useTerminalSession(host, cwd);
+	const { session, surface } = useTerminalSession(host, cwd);
 
 	const ptyId = session.status === "running" ? session.id : null;
 	useEffect(() => {
@@ -21,13 +21,21 @@ export function TerminalPane({
 	}, [ptyId, onSession]);
 
 	return (
-		<div className="relative min-h-0 overflow-hidden bg-background">
+		// The emulator's own background, not the app's. The grid is whole cells
+		// and the pane is not, so there is always a remainder — the padding, and
+		// the strip below the last row. While the two colours agreed that
+		// remainder was invisible; once the emulator started painting with the
+		// machine's terminal profile it became a frame drawn around the terminal.
+		// `--background` is the fallback, for a terminal that has not said yet.
+		<div
+			style={surface ? { backgroundColor: surface } : undefined}
+			className="relative min-h-0 overflow-hidden bg-background"
+		>
 			{/* The inset is a wrapper, not padding on the host. The fit addon reads
 			    the host's own box to size the grid and gets the subtraction wrong by
 			    a few pixels, which spends the bottom padding and then some — the last
 			    row sat past the pane's edge. With the host a plain box the grid fits
-			    inside it, and the remainder below the last row shows `--background`,
-			    which is what the emulator paints too — see ../theme.ts. */}
+			    inside it. */}
 			<div className="absolute inset-0 px-3 py-2">
 				<div ref={host} className="h-full w-full" />
 			</div>

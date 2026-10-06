@@ -12,6 +12,7 @@ import {
 import {
 	BROWSER_STATE_EVENT,
 	CLONE_PROGRESS_EVENT,
+	type SearchOptions,
 	TERMINAL_EXIT_EVENT,
 	TERMINAL_OUTPUT_EVENT,
 	WINDOW_CLOSE_REQUESTED_EVENT,
@@ -20,6 +21,8 @@ import { Browsers } from "./browser";
 import { clone } from "./git";
 import * as repo from "./repo";
 import { ok } from "./result";
+import { search } from "./search";
+import { readSystemTerminal } from "./system-terminal";
 import { Registry } from "./terminal";
 import { createUpdater } from "./updater";
 import { open as openWorkspace } from "./workspace";
@@ -159,6 +162,15 @@ ipcMain.handle("open_workspace", (_event, { path: raw }: { path: string }) =>
 	openWorkspace(raw),
 );
 
+// What the machine's own terminal looks like. Read once and kept: it shells
+// out to read a plist, and a profile does not change under a running app often
+// enough to pay for that on every pane that opens.
+let systemTerminal: ReturnType<typeof readSystemTerminal> | undefined;
+ipcMain.handle("terminal://system", () => {
+	if (systemTerminal === undefined) systemTerminal = readSystemTerminal();
+	return ok(systemTerminal);
+});
+
 // The side panel follows the shell: where it is now, and what git and gh say
 // about that place.
 ipcMain.handle("terminal://cwd", async (_event, { id }: { id: number }) => {
@@ -187,6 +199,17 @@ ipcMain.handle(
 	"repo://commit",
 	(_event, { root, message }: { root: string; message: string }) =>
 		repo.commit(root, message),
+);
+ipcMain.handle(
+	"repo://search",
+	(
+		_event,
+		{
+			cwd,
+			query,
+			options,
+		}: { cwd: string; query: string; options: SearchOptions },
+	) => search(cwd, query, options),
 );
 ipcMain.handle("repo://issues", (_event, { cwd }: { cwd: string }) =>
 	repo.issues(cwd),

@@ -148,7 +148,13 @@ const compact = (
 	};
 };
 
-/** Open in the active group, or go to it where it is already open. */
+/**
+ * Open in the active group, or go to it where it is already open.
+ *
+ * Already open takes the new tab's contents rather than keeping the old
+ * ones — same file, same tab, and a search result that names a line in a file
+ * already open should still take you to that line.
+ */
 export function openPane(window: PaneWindow, pane: Pane): PaneWindow {
 	const holder = holderOf(window, pane.id);
 	const target = holder?.id ?? window.active;
@@ -160,7 +166,9 @@ export function openPane(window: PaneWindow, pane: Pane): PaneWindow {
 				? group
 				: {
 						...group,
-						panes: holder ? group.panes : [...group.panes, pane],
+						panes: holder
+							? group.panes.map((item) => (item.id === pane.id ? pane : item))
+							: [...group.panes, pane],
 						activeId: pane.id,
 					},
 		),

@@ -72,14 +72,13 @@ branch guard in one step; calling the CLI directly bypasses all of it.
 
 | Step | Task | Skill |
 |---|---|---|
-| 1 | Open the issue | `gh issue create` |
+| 1 | Open the issue | `/issue` |
 | 2 | New branch | `/new` |
 | 3 | Commit and push | `/commit-push` |
 | 4 | Create a pull request | `/pr` |
 
-Run them in that order. Step 1 is not a skill because there is nothing to
-automate around it, and it is the one step that does not apply to every change —
-see Issues below for when it is needed. Steps 2 to 4 always apply.
+Run them in that order. Step 1 is the one step that does not apply to every
+change — see Issues below for when it is needed. Steps 2 to 4 always apply.
 
 **Never commit or push to `main`.** It is protected on GitHub: pull requests are
 required, force pushes and deletions are blocked, and the rule applies to
@@ -88,7 +87,7 @@ administrators. If a commit is requested while on `main`, create a branch with
 
 **Exception:** only when the user explicitly says to bypass the skills.
 
-Definitions live in `.claude/skills/{new,commit-push,pr}/SKILL.md`.
+Definitions live in `.claude/skills/{issue,new,commit-push,pr}/SKILL.md`.
 
 ## Labels
 
@@ -133,7 +132,12 @@ This repository does not use Linear. Work is tracked in GitHub Issues.
 - Write the issue as if the reader has not seen the diff: what is wrong today,
   what should be true instead, and an `Acceptance` list specific enough that
   someone else could tell whether it is done.
-- Issues use the forms in `.github/ISSUE_TEMPLATE/`, which apply the `type:*` label automatically.
+- Issues use the forms in `.github/ISSUE_TEMPLATE/`.
+- **Every issue carries every property**: one `type:*` label, one `mode:*`
+  label, and an assignee. A form applies its `type:*` label itself in the web
+  UI, but `gh issue create --body-file` bypasses that, so `/issue` sets all
+  three by hand. An issue with no assignee and no labels is one nobody can
+  filter for and nobody has.
 - **Link the issue from the pull request body with `Ref #12`.**
 - Use `Closes #12` only when the pull request satisfies every acceptance item on
   that issue. A closing keyword on partial work closes the issue without anyone

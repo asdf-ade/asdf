@@ -69,6 +69,11 @@ function Side({
 	);
 }
 
+/** The height of one rendered line, in pixels — `leading-6`. Exported because
+ *  scrolling to a line means multiplying by it, and two places guessing the
+ *  same number is how they stop agreeing. */
+export const LINE_HEIGHT = 24;
+
 // Two columns of text rather than one element per line: source lines have no
 // identity of their own, and nothing here needs to style a single one.
 export function SourceView({ lines }: { lines: string[] }) {

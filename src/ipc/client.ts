@@ -6,6 +6,9 @@ import type {
 	Issue,
 	PullRequest,
 	RepoSnapshot,
+	SearchOptions,
+	SearchResult,
+	SystemTerminal,
 	WorkspaceInfo,
 } from "./bindings";
 import { bridge } from "./bridge";
@@ -45,6 +48,9 @@ export const ipc = {
 	/** Clones into a new folder under `parent`, and answers with where. */
 	cloneRepo: (url: string, parent: string) =>
 		call<{ path: string }>("clone_repo", { url, parent }),
+	/** The profile the machine's own terminal paints with, or null where there
+	 *  is none to read. */
+	systemTerminal: () => call<SystemTerminal | null>("terminal://system"),
 	openTerminal: (cwd: string | null, cols: number, rows: number) =>
 		call<number>("open_terminal", { cwd, cols, rows }),
 	writeTerminal: (id: number, data: string) =>
@@ -63,6 +69,9 @@ export const ipc = {
 		call<null>("repo://revert", { root, file }),
 	repoCommit: (root: string, message: string) =>
 		call<null>("repo://commit", { root, message }),
+	/** Text in the files under `cwd`, found with `git grep`. */
+	repoSearch: (cwd: string, query: string, options: SearchOptions) =>
+		call<SearchResult>("repo://search", { cwd, query, options }),
 	repoIssues: (cwd: string) => call<Issue[]>("repo://issues", { cwd }),
 	repoPulls: (cwd: string) => call<PullRequest[]>("repo://pulls", { cwd }),
 

@@ -46,7 +46,15 @@ export type Project = {
  *  issues and pull requests belong to the repository the terminal was in. */
 export type Pane =
 	| { kind: "session"; id: string; sessionId: string }
-	| { kind: "file"; id: string; sessionId: string; dir: string; path: string }
+	| {
+			kind: "file";
+			id: string;
+			sessionId: string;
+			dir: string;
+			path: string;
+			/** Where to open it, when something knew — a search result does. */
+			line?: number;
+	  }
 	/** A live browser an agent drives. It belongs to the workspace, not to any
 	 *  one terminal: agents come and go, and a page being read outlasts the
 	 *  shell that opened it. */
