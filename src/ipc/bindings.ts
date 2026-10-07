@@ -185,6 +185,26 @@ export type DiffRow = {
 
 export type Worktree = { path: string; branch: string | null };
 
+/**
+ * One commit in the repository's history.
+ *
+ * `lane` is the column its dot sits in and `through` the columns whose lines
+ * pass it: together they are the branch graph, worked out in the main process
+ * because git reports parents and nothing about shape.
+ */
+export type Commit = {
+	hash: string;
+	parents: string[];
+	author: string;
+	/** ISO 8601, as git prints it with `%aI`. */
+	date: string;
+	subject: string;
+	/** Branch and tag names pointing at this commit. */
+	refs: string[];
+	lane: number;
+	through: number[];
+};
+
 /** Everything git says about a folder, in one read. */
 export type RepoSnapshot = {
 	cwd: string;

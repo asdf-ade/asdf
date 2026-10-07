@@ -2,6 +2,7 @@ import {
 	Check,
 	CircleDot,
 	GitBranch,
+	GitCommitVertical,
 	GitPullRequest,
 	Globe,
 	type LucideIcon,
@@ -20,6 +21,8 @@ import {
 	useState,
 } from "react";
 import { useTranslation } from "react-i18next";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -34,6 +37,8 @@ import { AgentIcon } from "../agent-icon";
 import type { DropTarget, Side } from "../panes";
 import type {
 	Agent,
+	ChangedFile,
+	Commit,
 	DiffRow,
 	Issue,
 	Pane,
@@ -44,6 +49,9 @@ import type {
 	TabKind,
 } from "../types";
 import { DiffView, LINE_HEIGHT, SourceView } from "./CodeView";
+
+/** The single letter an editor puts next to a changed file. */
+const kindLetter = { modified: "M", added: "A", deleted: "D" } as const;
 
 /** The dataTransfer type a dragged tab travels as. */
 const PANE_MIME = "application/x-asdf-pane";
@@ -58,6 +66,7 @@ const TAB_KINDS: { kind: TabKind; icon: LucideIcon }[] = [
 // Only the tabs whose label is a bare number need saying what they are; a
 // terminal's or a file's name already does.
 const tabIcon: Partial<Record<Pane["kind"], LucideIcon>> = {
+	commit: GitCommitVertical,
 	issue: CircleDot,
 	pull: GitPullRequest,
 	browser: Globe,
@@ -78,6 +87,8 @@ function tabLabel(
 			return pane.path.split("/").pop() ?? pane.path;
 		case "browser":
 			return browserTitle(pane.browserId);
+		case "commit":
+			return pane.commit.hash.slice(0, 7);
 		default:
 			return `#${pane.number}`;
 	}
@@ -374,6 +385,8 @@ export function PaneArea({
 			<div className="relative flex min-h-0 flex-1 flex-col">
 				{!active ? (
 					empty
+				) : active.kind === "commit" ? (
+					<CommitBody key={active.id} cwd={active.cwd} commit={active.commit} />
 				) : active.kind === "issue" ? (
 					<IssueBody
 						issue={issues.find((item) => item.number === active.number)}
@@ -727,6 +740,104 @@ function FileBody({
 	);
 }
 
+/**
+ * One commit: what it says, and what it did to each file it touched.
+ *
+ * Read-only. Picking a file reads that commit's diff for it, which is a second
+ * call rather than part of the first: a commit touching forty files is forty
+ * diffs nobody asked for.
+ */
+function CommitBody({ cwd, commit }: { cwd: string; commit: Commit }) {
+	const { t } = useTranslation();
+	const [files, setFiles] = useState<ChangedFile[] | null>(null);
+	const [failure, setFailure] = useState<string | null>(null);
+	const [chosen, setChosen] = useState<string | null>(null);
+	const [rows, setRows] = useState<DiffRow[] | null>(null);
+
+	useEffect(() => {
+		let alive = true;
+		setFiles(null);
+		setChosen(null);
+		void ipc.repoCommitFiles(cwd, commit.hash).then((answer) => {
+			if (!alive) return;
+			if (answer.ok) setFiles(answer.value);
+			else setFailure(answer.error.message);
+		});
+		return () => {
+			alive = false;
+		};
+	}, [cwd, commit.hash]);
+
+	useEffect(() => {
+		if (!chosen) return;
+		let alive = true;
+		setRows(null);
+		void ipc.repoCommitDiff(cwd, commit.hash, chosen).then((answer) => {
+			if (!alive) return;
+			if (answer.ok) setRows(answer.value);
+			else setFailure(answer.error.message);
+		});
+		return () => {
+			alive = false;
+		};
+	}, [cwd, commit.hash, chosen]);
+
+	return (
+		<div className="flex min-h-0 flex-1 flex-col">
+			<div className="shrink-0 border-b px-4 py-3">
+				<p className="font-medium text-sm">{commit.subject}</p>
+				<p className="mt-1 text-muted-foreground text-xs">
+					{commit.author} · {new Date(commit.date).toLocaleString()} ·{" "}
+					<span className="font-mono">{commit.hash.slice(0, 12)}</span>
+				</p>
+			</div>
+
+			{failure ? (
+				<p className="p-6 text-muted-foreground text-sm">{failure}</p>
+			) : (
+				<div className="flex min-h-0 flex-1 flex-col">
+					<ul className="max-h-48 shrink-0 overflow-auto border-b p-1">
+						{(files ?? []).map((file) => (
+							<li key={file.path}>
+								<button
+									type="button"
+									aria-current={file.path === chosen ? "true" : undefined}
+									onClick={() => setChosen(file.path)}
+									className={cn(
+										"flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-xs",
+										file.path === chosen
+											? "bg-accent text-foreground"
+											: "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+									)}
+								>
+									<span className="w-3 shrink-0 text-center font-mono text-[10px]">
+										{kindLetter[file.kind]}
+									</span>
+									<span className="min-w-0 flex-1 truncate">{file.path}</span>
+									<span className="shrink-0 text-[10px] tabular-nums">
+										<span className="text-emerald-600">+{file.added}</span>{" "}
+										<span className="text-destructive">-{file.removed}</span>
+									</span>
+								</button>
+							</li>
+						))}
+					</ul>
+
+					<div className="min-h-0 flex-1 overflow-auto">
+						{!chosen ? (
+							<p className="p-6 text-muted-foreground text-sm">
+								{t("session.history.pickFile")}
+							</p>
+						) : (
+							rows && <DiffView rows={rows} />
+						)}
+					</div>
+				</div>
+			)}
+		</div>
+	);
+}
+
 // An issue or a pull request is a page you open and read, which is why it lands
 // in a tab rather than in the narrow column that lists it.
 function IssueBody({ issue }: { issue?: Issue }) {
@@ -796,7 +907,14 @@ function Article({
 				<div className="mt-2 flex flex-wrap items-center gap-2 text-muted-foreground text-xs">
 					{meta}
 				</div>
-				<p className="mt-4 whitespace-pre-wrap text-sm leading-6">{body}</p>
+				{/* GitHub writes these in GitHub-flavoured markdown — task lists,
+				    tables, fenced code — so that is what they are read as. The
+				    renderer builds elements rather than HTML, which is also what
+				    keeps a body nobody here wrote from carrying script into the
+				    window. The look lives in `.markdown` in index.css. */}
+				<div className="markdown mt-4 text-sm leading-6">
+					<Markdown remarkPlugins={[remarkGfm]}>{body}</Markdown>
+				</div>
 			</div>
 		</div>
 	);

@@ -87,6 +87,12 @@
 			"empty": "Nothing changed yet.",
 			"title": "Changes"
 		},
+		"history": {
+			"title": "History",
+			"empty": "No commits yet.",
+			"more": "Load more",
+			"pickFile": "Pick a file to see its diff."
+		},
 		"files": {
 			"pick": "Pick a file to read it.",
 			"noPreview": "No preview for this file.",
@@ -121,11 +127,22 @@
 		},
 		"sidePanel": "Project panel",
 		"newWorkspace": "New workspace",
-		"workspaces": "Workspaces",
 		"terminalTitle": "Terminal {{n}}",
 		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "Remove workspace",
 		"workspace": {
+			"title": "New workspace",
+			"name": "Workspace name",
+			"back": "Back",
+			"folder": "Folder",
+			"source": {
+				"empty": "Empty workspace",
+				"emptyHint": "Start free, with no folder.",
+				"folder": "Open a folder",
+				"folderHint": "Pick one, or make a new one in the picker",
+				"clone": "Clone a repository",
+				"cloneHint": "Fetch it into a new folder"
+			},
 			"namePlaceholder": "web",
 			"menu": "Workspace options",
 			"chooseFolder": "Choose folder…",

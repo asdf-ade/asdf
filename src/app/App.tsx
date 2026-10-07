@@ -28,6 +28,7 @@ import { ipc } from "@/ipc/client";
 import { platform } from "@/ipc/platform";
 import { cn } from "@/lib/utils";
 import { CloneRepoDialog } from "./CloneRepoDialog";
+import { NewWorkspaceDialog } from "./NewWorkspaceDialog";
 import {
 	SettingsBody,
 	SettingsNav,
@@ -186,9 +187,9 @@ export function App() {
 	// simply switched on.
 	const [settings, setSettings] = useState<SettingsSection | null>(null);
 	const [theme, setTheme] = useState<Theme>("system");
-	// The sidebar's name field: what is in it, and null when it is closed. Held
-	// here because the empty window's buttons open it too.
-	const [naming, setNaming] = useState<string | null>(null);
+	// Whether the dialog that makes a workspace is up. Held here because the
+	// empty window's buttons open it too.
+	const [newWorkspace, setNewWorkspace] = useState(false);
 	// The workspace a clone is being set up for, and null when none is.
 	const [cloningInto, setCloningInto] = useState<string | null>(null);
 	// Whether the machine may sleep while an agent works. The block itself is
@@ -242,7 +243,8 @@ export function App() {
 	// every dialog and takes the pointer that was meant for one. The same is
 	// true of a tab in the air, whose drop zones are DOM underneath. Both are
 	// answered by putting the views away until the thing on top is done with.
-	const overlay = dragging || tabMenu || cloningInto !== null || updater.open;
+	const overlay =
+		dragging || tabMenu || newWorkspace || cloningInto !== null || updater.open;
 	useEffect(() => {
 		void ipc.browserCover(overlay);
 	}, [overlay]);
@@ -324,7 +326,7 @@ export function App() {
 	// With no workspace yet there is nothing for "+" to open a tab in, so it
 	// opens the sidebar's name field instead — the one place a workspace is
 	// made, wherever the asking started.
-	const newWorkspace = () => setNaming("");
+	const askWorkspace = () => setNewWorkspace(true);
 
 	// What every session's shell is doing, including the ones not on screen.
 	const status = useSessionStatus({
@@ -404,9 +406,7 @@ export function App() {
 							onSelectProject={sessions.selectProject}
 							onOpenSession={sessions.openSession}
 							onOpenBrowser={sessions.openBrowser}
-							naming={naming}
-							onNaming={setNaming}
-							onCreateWorkspace={(name) => sessions.createWorkspace(name)}
+							onNewWorkspace={askWorkspace}
 							onChooseFolder={(projectId) => void chooseFolder(projectId)}
 							onClearFolder={(projectId) =>
 								sessions.setWorkspacePath(projectId, null)
@@ -471,16 +471,16 @@ export function App() {
 									agents={agents}
 									onNewTabMenu={setTabMenu}
 									onNewAgent={(agent) => {
-										if (!sessions.activeProject) return newWorkspace();
+										if (!sessions.activeProject) return askWorkspace();
 										sessions.focusGroup(group.id);
 										sessions.createSession(sessions.activeProjectId, agent);
 									}}
 									onNewTab={(kind) => {
-										if (!sessions.activeProject) return newWorkspace();
+										if (!sessions.activeProject) return askWorkspace();
 										openTab(kind, group.id);
 									}}
 									onNewTerminal={() => {
-										if (!sessions.activeProject) return newWorkspace();
+										if (!sessions.activeProject) return askWorkspace();
 										sessions.createSession(sessions.activeProjectId);
 									}}
 									dragging={dragging}
@@ -606,6 +606,12 @@ export function App() {
 							onOpenFile={(dir, path, line, ranges) =>
 								active && sessions.openFile(active.id, dir, path, line, ranges)
 							}
+							activeCommit={
+								sessions.panes
+									.filter((pane) => pane.kind === "commit")
+									.find((pane) => pane.id === sessions.activeId)?.commit.hash
+							}
+							onOpenCommit={(commit) => sessions.openCommit(commit, cwd ?? "")}
 							onOpenIssue={sessions.openIssue}
 							onOpenPull={sessions.openPull}
 						/>
@@ -651,6 +657,15 @@ export function App() {
 					{versionLabel}
 				</button>
 			</footer>
+
+			{/* A workspace is a name and, where there is one, the folder its
+			    terminals start in. Asked here rather than inline, so a workspace can
+			    be made against a folder or a clone from the start. */}
+			<NewWorkspaceDialog
+				open={newWorkspace}
+				onOpenChange={setNewWorkspace}
+				onCreate={(name, path) => sessions.createWorkspace(name, path)}
+			/>
 
 			<CloneRepoDialog
 				open={cloningInto !== null}
