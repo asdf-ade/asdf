@@ -1,8 +1,9 @@
-import type { Agent } from "@/ipc/bindings";
+import type { Agent, Commit } from "@/ipc/bindings";
 
 export type {
 	Agent,
 	ChangedFile,
+	Commit,
 	DiffRow,
 	FileNode,
 	FileStatus,
@@ -72,5 +73,8 @@ export type Pane =
 	 *  one terminal: agents come and go, and a page being read outlasts the
 	 *  shell that opened it. */
 	| { kind: "browser"; id: string; browserId: number }
+	/** One commit, read where the session is: the folder travels with the tab
+	 *  because a commit means nothing without the repository it is in. */
+	| { kind: "commit"; id: string; cwd: string; commit: Commit }
 	| { kind: "issue"; id: string; number: number }
 	| { kind: "pull"; id: string; number: number };

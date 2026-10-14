@@ -87,6 +87,12 @@
 			"empty": "Todavía no hay cambios.",
 			"title": "Cambios"
 		},
+		"history": {
+			"title": "Historial",
+			"empty": "Aún no hay commits.",
+			"more": "Cargar más",
+			"pickFile": "Elige un archivo para ver su diff."
+		},
 		"files": {
 			"pick": "Elige un archivo para leerlo.",
 			"noPreview": "Este archivo no tiene vista previa.",
@@ -121,11 +127,22 @@
 		},
 		"sidePanel": "Panel del proyecto",
 		"newWorkspace": "Nuevo espacio de trabajo",
-		"workspaces": "Espacios de trabajo",
 		"terminalTitle": "Terminal {{n}}",
 		"agentTitle": "{{name}} {{n}}",
 		"removeWorkspace": "Quitar espacio de trabajo",
 		"workspace": {
+			"title": "Nuevo espacio de trabajo",
+			"name": "Nombre del espacio de trabajo",
+			"back": "Atrás",
+			"folder": "Carpeta",
+			"source": {
+				"empty": "Espacio vacío",
+				"emptyHint": "Empieza libre, sin carpeta.",
+				"folder": "Abrir una carpeta",
+				"folderHint": "Elige una, o crea una nueva en el selector",
+				"clone": "Clonar un repositorio",
+				"cloneHint": "Descárgalo en una carpeta nueva"
+			},
 			"namePlaceholder": "web",
 			"menu": "Opciones del espacio de trabajo",
 			"chooseFolder": "Elegir carpeta…",

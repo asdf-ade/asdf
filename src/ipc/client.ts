@@ -3,6 +3,8 @@ import type {
 	AppError,
 	BrowserEndpoint,
 	BrowserInfo,
+	ChangedFile,
+	Commit,
 	DiffRow,
 	Issue,
 	PullRequest,
@@ -77,6 +79,15 @@ export const ipc = {
 	agents: () => call<Agent[]>("agents://list"),
 	repoIssues: (cwd: string) => call<Issue[]>("repo://issues", { cwd }),
 	repoPulls: (cwd: string) => call<PullRequest[]>("repo://pulls", { cwd }),
+	/** The newest commits of the repository, with the graph worked out. Reading
+	 *  further is a bigger limit, not an offset: a page of lanes only makes sense
+	 *  with every commit above it. */
+	repoHistory: (cwd: string, limit: number) =>
+		call<Commit[]>("repo://history", { cwd, limit }),
+	repoCommitFiles: (cwd: string, hash: string) =>
+		call<ChangedFile[]>("repo://commit-files", { cwd, hash }),
+	repoCommitDiff: (cwd: string, hash: string, file: string) =>
+		call<DiffRow[]>("repo://commit-diff", { cwd, hash, file }),
 
 	/** The main process holds the browser views; these are what a pane does. */
 	browserEndpoint: () => call<BrowserEndpoint>("browser://endpoint"),

@@ -10,6 +10,7 @@ import {
 	FileDiff,
 	Files,
 	GitBranch,
+	GitCommitVertical,
 	GitMerge,
 	GitPullRequest,
 	GitPullRequestDraft,
@@ -23,15 +24,17 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type {
 	ChangedFile,
+	Commit,
 	Issue,
 	PullRequest,
 	RepoSnapshot,
 	ReviewState,
 } from "../types";
 import { FileExplorer } from "./FileExplorer";
+import { HistoryPanel } from "./HistoryPanel";
 import { SearchPanel } from "./SearchPanel";
 
-type View = "files" | "changes" | "issues" | "pulls";
+type View = "files" | "changes" | "history" | "issues" | "pulls";
 
 const issueIcon: Record<Issue["state"], LucideIcon> = {
 	open: CircleDot,
@@ -70,6 +73,7 @@ const ciTone: Record<PullRequest["ci"], string> = {
 const viewIcon: Record<View, LucideIcon> = {
 	files: Files,
 	changes: FileDiff,
+	history: GitCommitVertical,
 	issues: CircleDot,
 	pulls: GitPullRequest,
 };
@@ -106,6 +110,9 @@ type Props = {
 		line?: number,
 		ranges?: [number, number][],
 	) => void;
+	/** The commit whose tab is on screen, lit in the history list. */
+	activeCommit?: string;
+	onOpenCommit: (commit: Commit) => void;
 	onOpenIssue: (number: number) => void;
 	onOpenPull: (number: number) => void;
 };
@@ -121,6 +128,8 @@ export function SidePanel({
 	onRefreshGithub,
 	onCommit,
 	onOpenFile,
+	activeCommit,
+	onOpenCommit,
 	onOpenIssue,
 	onOpenPull,
 }: Props) {
@@ -129,6 +138,7 @@ export function SidePanel({
 
 	const counts: Record<View, number | undefined> = {
 		files: undefined,
+		history: undefined,
 		changes: repo?.changes.filter((file) => reviewOf(file.path) === "new")
 			.length,
 		issues: issues.length,
@@ -138,6 +148,7 @@ export function SidePanel({
 	const label: Record<View, string> = {
 		files: t("session.files.title"),
 		changes: t("session.changes.title"),
+		history: t("session.history.title"),
 		issues: t("github.issues"),
 		pulls: t("github.pulls"),
 	};
@@ -150,36 +161,38 @@ export function SidePanel({
 				aria-label={t("session.sidePanel")}
 				className="drag-region flex h-9 shrink-0 gap-px border-b p-1"
 			>
-				{(["files", "changes", "issues", "pulls"] as const).map((value) => {
-					const Icon = viewIcon[value];
-					return (
-						<button
-							key={value}
-							type="button"
-							aria-pressed={view === value}
-							aria-label={label[value]}
-							title={label[value]}
-							onClick={() => setView(value)}
-							className={cn(
-								"flex flex-1 items-center justify-center rounded-md transition-colors",
-								view === value
-									? "bg-background text-foreground shadow-xs"
-									: "text-muted-foreground hover:text-foreground",
-							)}
-						>
-							{/* The count rides the icon's corner, so a tab that wants
+				{(["files", "changes", "history", "issues", "pulls"] as const).map(
+					(value) => {
+						const Icon = viewIcon[value];
+						return (
+							<button
+								key={value}
+								type="button"
+								aria-pressed={view === value}
+								aria-label={label[value]}
+								title={label[value]}
+								onClick={() => setView(value)}
+								className={cn(
+									"flex flex-1 items-center justify-center rounded-md transition-colors",
+									view === value
+										? "bg-background text-foreground shadow-xs"
+										: "text-muted-foreground hover:text-foreground",
+								)}
+							>
+								{/* The count rides the icon's corner, so a tab that wants
 							    attention says so at a glance. */}
-							<span className="relative">
-								<Icon className="size-4" />
-								{counts[value] ? (
-									<span className="-top-1.5 -right-2 absolute flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-red-500 px-1 font-medium text-[9px] text-white tabular-nums leading-none">
-										{counts[value]}
-									</span>
-								) : null}
-							</span>
-						</button>
-					);
-				})}
+								<span className="relative">
+									<Icon className="size-4" />
+									{counts[value] ? (
+										<span className="-top-1.5 -right-2 absolute flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-red-500 px-1 font-medium text-[9px] text-white tabular-nums leading-none">
+											{counts[value]}
+										</span>
+									) : null}
+								</span>
+							</button>
+						);
+					},
+				)}
 			</nav>
 
 			{!cwd ? (
@@ -200,6 +213,12 @@ export function SidePanel({
 						onOpen={(path) => onOpenFile(repo.cwd, path)}
 					/>
 				</SearchPanel>
+			) : view === "history" ? (
+				<HistoryPanel
+					cwd={repo.cwd}
+					activeHash={activeCommit}
+					onOpen={onOpenCommit}
+				/>
 			) : view === "changes" ? (
 				<SourceControl
 					repo={repo}

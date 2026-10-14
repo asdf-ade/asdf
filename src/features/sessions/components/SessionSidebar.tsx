@@ -14,7 +14,7 @@ import {
 	Unlink,
 	X,
 } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +24,6 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { Project, Session } from "../types";
 import type { SessionStatus } from "../use-session-status";
@@ -49,13 +48,9 @@ type Props = {
 	onSelectProject: (projectId: string) => void;
 	onOpenSession: (sessionId: string) => void;
 	onOpenBrowser: (projectId: string, browserId: number) => void;
-	/** What is typed into the header's input, and null when it is not open.
-	 *  Held by the shell so the empty window's buttons can open it too. */
-	naming: string | null;
-	onNaming: (value: string | null) => void;
-	/** The name typed into the header's input. The workspace opens with its
-	 *  first terminal already in it. */
-	onCreateWorkspace: (name: string) => void;
+	/** Opens the dialog that makes one. Held by the shell so the empty window's
+	 *  buttons can open it too. */
+	onNewWorkspace: () => void;
 	/** The OS picker, then the folder becomes this workspace's. */
 	onChooseFolder: (projectId: string) => void;
 	onClearFolder: (projectId: string) => void;
@@ -80,9 +75,7 @@ export function SessionSidebar({
 	onSelectProject,
 	onOpenSession,
 	onOpenBrowser,
-	naming,
-	onNaming,
-	onCreateWorkspace,
+	onNewWorkspace,
 	onChooseFolder,
 	onClearFolder,
 	onCloneInto,
@@ -90,12 +83,6 @@ export function SessionSidebar({
 }: Props) {
 	const { t } = useTranslation();
 	const [folded, setFolded] = useState<ReadonlySet<string>>(new Set());
-	const field = useRef<HTMLInputElement | null>(null);
-
-	useEffect(() => {
-		if (naming !== null) field.current?.focus();
-	}, [naming]);
-
 	const toggle = (id: string) =>
 		setFolded((previous) => {
 			const next = new Set(previous);
@@ -103,57 +90,23 @@ export function SessionSidebar({
 			return next;
 		});
 
-	const commit = () => {
-		const name = (naming ?? "").trim();
-		onNaming(null);
-		// An empty name is not a workspace called nothing; it is someone who
-		// changed their mind, which is what Escape does too.
-		if (name) onCreateWorkspace(name);
-	};
-
 	return (
 		<nav
 			aria-label={t("session.sidebarLabel")}
 			className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1.5 pb-2"
 		>
-			{/* What the list is, and the one thing to do to it. The "+" sits at the
-			    far end so the heading reads as a heading and not as a button. */}
-			<div className="flex items-center gap-1 pr-0.5 pl-2">
-				<span className="flex-1 truncate font-medium text-[11px] text-muted-foreground uppercase tracking-wide">
-					{t("session.workspaces")}
-				</span>
-				<Button
-					size="icon"
-					variant="ghost"
-					aria-label={t("session.newWorkspace")}
-					title={t("session.newWorkspace")}
-					onClick={() => onNaming("")}
-					className="size-6 shrink-0 text-muted-foreground hover:text-foreground"
-				>
-					<Plus className="size-3.5" />
-				</Button>
-			</div>
-
-			{naming !== null && (
-				<div className="px-0.5 pt-1">
-					<Input
-						ref={field}
-						value={naming}
-						aria-label={t("session.newWorkspace")}
-						placeholder={t("session.workspace.namePlaceholder")}
-						onChange={(event) => onNaming(event.target.value)}
-						onKeyDown={(event) => {
-							if (event.key === "Enter") commit();
-							if (event.key === "Escape") onNaming(null);
-						}}
-						// Clicking away is the same answer as Escape: the row was in the
-						// way of whatever was clicked, and keeping it would be a modal
-						// that never said it was one.
-						onBlur={() => onNaming(null)}
-						className="h-7 bg-background/70 text-xs"
-					/>
-				</div>
-			)}
+			{/* The whole row is the button, the way the one at the foot of the
+			    sidebar is: a heading with a target at its far end makes the two
+			    pixels around the "+" the only part that can be pressed. */}
+			<Button
+				variant="ghost"
+				size="sm"
+				onClick={onNewWorkspace}
+				className="h-7 w-full shrink-0 justify-between gap-2 px-2 text-muted-foreground text-xs"
+			>
+				{t("session.newWorkspace")}
+				<Plus className="size-3.5" />
+			</Button>
 
 			<ul className="mt-1 space-y-0.5">
 				{projects.map((project) => {
